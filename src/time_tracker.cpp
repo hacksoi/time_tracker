@@ -7,11 +7,38 @@
 // TODO(hacksoi): Consider a better method of determining the size of the
 // output file (possibly a pass over the input file to see how many entries
 // have been processed)
-#define TableToEntryRatio 4
-#define MaxInputFileSize (0xFFFFFFFF / TableToEntryRatio)
+// NOTE(hacksoi): I actually calculated around 6
+#define TABLES_TO_ENTRY_RATIO 8
+#define MAX_INPUT_FILE_SIZE (0xFFFFFFFF / TABLES_TO_ENTRY_RATIO)
+#define SIZE_OF_TABLES 1940
 
 #define MAX_CATEGORY_NAME_LENGTH 32
-#define TIME_ENTRY_FORMAT_LENGTH (8 + 32)
+#define ENTRY_FORMAT_LENGTH (8 + MAX_CATEGORY_NAME_LENGTH)
+
+//
+// NOTE(hacksoi): Variables for processing tables 
+//
+
+#define NEWLINE_SIZE 2
+
+#define END_OF_FILE_FLAG '$'
+#define ENTRY_PROCESSED_FLAG '#'
+#define ENTRY_UNPROCESSED_FLAG '@'
+
+#define TABLE_ROWS 8
+#define TABLE_COLUMNS 39
+#define TABLE_SIZE (TABLE_ROWS * TABLE_COLUMNS)
+
+#define TABLES_PER_ROW 3
+
+#define HOUR_COLUMN 13
+#define ANALYSIS_COLUMN 31
+
+#define HOUR_LENGTH 11
+#define HOUR_END_COLUMN (HOUR_COLUMN + HOUR_LENGTH)
+
+#define DISTANCE_BETWEEN_TABLES_HORIZONTAL 1
+#define TOTAL_TABLE_COLUMNS (TABLE_COLUMNS + DISTANCE_BETWEEN_TABLES_HORIZONTAL)
 
 enum time_category
 {
@@ -172,9 +199,9 @@ operator+(time_elapse A, time_elapse B)
 inline time_elapse &
 operator+=(time_elapse &A, time_elapse B)
 {
-	time_elapse Result = A + B;
+	A = A + B;
 
-	return Result;
+	return A;
 }
 
 struct number2_char
@@ -191,9 +218,9 @@ ConvertToChar(uint32_t A)
 	uint32_t SecondDigit = (A % 10);
 	uint32_t FirstDigit = (A / 10);
 
-	number2Char Result;
-	number2Char.FirstDigit = (char)('0' + FirstDigit);
-	number2Char.SecondDigit = (char)('0' + SecondDigit);
+	number2_char Result;
+	Result.FirstDigit = (char)('0' + FirstDigit);
+	Result.SecondDigit = (char)('0' + SecondDigit);
 
 	return Result;
 }
@@ -217,8 +244,8 @@ union raw_entry_data
 		char Category[MAX_CATEGORY_NAME_LENGTH];
 	};
 
-	char Elements[TIME_BLOCK_INFO_SIZE];
-}
+	char Elements[ENTRY_FORMAT_LENGTH];
+};
 
 struct entry
 {
@@ -256,82 +283,6 @@ struct process_entry_result
 	entry Entry;
 };
 
-internal void
-FillWithDefaultValues(table *Tables)
-{
-	// Sleep
-	{
-		Tables[TIME_CATEGORY_SLEEP].TargetTime.Hours = ;
-		Tables[TIME_CATEGORY_SLEEP].TargetTime.Minutes = ;
-
-		Tables[TIME_CATEGORY_SLEEP].ActualTime.Hours = 0;
-		Tables[TIME_CATEGORY_SLEEP].ActualTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_SLEEP].IsUnderGood = false;
-		Tables[TIME_CATEGORY_SLEEP].Name = "Sleep";
-	}
-
-	// Play
-	{
-		Tables[TIME_CATEGORY_PLAY].TargetTime.Hours = ;
-		Tables[TIME_CATEGORY_PLAY].TargetTime.Minutes = ;
-
-		Tables[TIME_CATEGORY_PLAY].ActualTime.Hours = 0;
-		Tables[TIME_CATEGORY_PLAY].ActualTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_PLAY].IsUnderGood = false;
-		Tables[TIME_CATEGORY_PLAY].Name = "Play";
-	}
-
-	// School
-	{
-		Tables[TIME_CATEGORY_SCHOOL].TargetTime.Hours = ;
-		Tables[TIME_CATEGORY_SCHOOL].TargetTime.Minutes = ;
-
-		Tables[TIME_CATEGORY_SCHOOL].ActualTime.Hours = 0;
-		Tables[TIME_CATEGORY_SCHOOL].ActualTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_SCHOOL].IsUnderGood = false;
-		Tables[TIME_CATEGORY_SCHOOL].Name = "School";
-	}
-
-	// Education
-	{
-		Tables[TIME_CATEGORY_EDUCATION].TargetTime.Hours = ;
-		Tables[TIME_CATEGORY_EDUCATION].TargetTime.Minutes = ;
-
-		Tables[TIME_CATEGORY_EDUCATION].ActualTime.Hours = 0;
-		Tables[TIME_CATEGORY_EDUCATION].ActualTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_EDUCATION].IsUnderGood = false;
-		Tables[TIME_CATEGORY_EDUCATION].Name = "Education";
-	}
-
-	// Programming
-	{
-		Tables[TIME_CATEGORY_PROGRAMMING].TargetTime.Hours = ;
-		Tables[TIME_CATEGORY_PROGRAMMING].TargetTime.Minutes = ;
-
-		Tables[TIME_CATEGORY_PROGRAMMING].ActualTime.Hours = 0;
-		Tables[TIME_CATEGORY_PROGRAMMING].ActualTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_PROGRAMMING].IsUnderGood = false;
-		Tables[TIME_CATEGORY_PROGRAMMING].Name = "Programming";
-	}
-
-	// Awake
-	{
-		Tables[TIME_CATEGORY_AWAKE].TargetTime.Hours = ;
-		Tables[TIME_CATEGORY_AWAKE].TargetTime.Minutes = ;
-
-		Tables[TIME_CATEGORY_AWAKE].ActualTime.Hours = 0;
-		Tables[TIME_CATEGORY_AWAKE].ActualTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_AWAKE].IsUnderGood = false;
-		Tables[TIME_CATEGORY_AWAKE].Name = "Awake";
-	}
-}
-
 internal bool32
 Equals(char *A, char *B)
 {
@@ -340,50 +291,11 @@ Equals(char *A, char *B)
 	while((*A != '\0') &&
 		  (*B != '\0'))
 	{
-		if(*A != *B)
+		if(*A++ != *B++)
 		{
 			Result = false;
 			break;
 		}
-	}
-
-	return Result;
-}
-
-internal uint32_t
-Copy(char *A, char *B)
-{
-	uint32_t Result = 0;
-
-	while(*A != '\0')
-	{
-		*B++ = *A++;
-		++Result;
-	}
-
-	return Result;
-}
-
-inline uint32_t
-ConvertToUInt32(char FirstDigitChar, char SecondDigitChar)
-{
-	uint32_t FirstDigit = (FirstDigitChar - '0');
-	uint32_t SecondDigit = (SecondDigitChar - '0');
-
-	uint32_t Result = ((FirstDigit * 10) + SecondDigit);
-
-	return Result;
-}
-
-internal uint32_t
-PushLine(char *Input, char *Output)
-{
-	uint32_t Result = 0;
-
-	while((*Output) != '\n')
-	{
-		*Output = *Input++;
-		++Result;
 	}
 
 	return Result;
@@ -397,7 +309,7 @@ Ceil(float A)
 	bool32 HasFractional = (A != (uint32_t)A);
 	if(HasFractional)
 	{
-		Result = (uint32_t)(A + 1.0f)
+		Result = (uint32_t)(A + 1.0f);
 	}
 	else
 	{
@@ -420,12 +332,143 @@ Length(char *A)
 	return Result;
 }
 
+inline uint32_t
+ConvertToUInt32(char FirstDigitChar, char SecondDigitChar)
+{
+	uint32_t FirstDigit = (FirstDigitChar - '0');
+	uint32_t SecondDigit = (SecondDigitChar - '0');
+
+	uint32_t Result = ((FirstDigit * 10) + SecondDigit);
+
+	return Result;
+}
+
+internal uint32_t
+CopyLine(char *Input, char *Output)
+{
+	uint32_t Result = 0;
+
+	for(;;)
+	{
+		*Output = *Input++;
+		++Result;
+
+		if(*Output == '\n')
+		{
+			break;
+		}
+
+		++Output;
+	}
+
+	return Result;
+}
+
+internal void
+Copy(char **Buffer, char *Src, uint32_t *Column)
+{
+	while(*Src != '\0')
+	{
+		**Buffer = *Src++;
+		++(*Buffer);
+		++(*Column);
+	}
+}
+
+internal void
+Copy(char **Buffer, char C, uint32_t *StartColumn, uint32_t EndColumn)
+{
+	while(*StartColumn < EndColumn)
+	{
+		**Buffer = C;
+		++(*Buffer);
+		++(*StartColumn);
+	}
+}
+
+internal void
+FillWithDefaultValues(table *Tables)
+{
+	// Sleep
+	{
+		Tables[TIME_CATEGORY_SLEEP].TargetTime.Hours = 8;
+		Tables[TIME_CATEGORY_SLEEP].TargetTime.Minutes = 0;
+
+		Tables[TIME_CATEGORY_SLEEP].RealityTime.Hours = 0;
+		Tables[TIME_CATEGORY_SLEEP].RealityTime.Minutes = 0;
+
+		Tables[TIME_CATEGORY_SLEEP].IsUnderGood = true;
+		Tables[TIME_CATEGORY_SLEEP].Name = "Sleep";
+	}
+
+	// Play
+	{
+		Tables[TIME_CATEGORY_PLAY].TargetTime.Hours = 3;
+		Tables[TIME_CATEGORY_PLAY].TargetTime.Minutes = 15;
+
+		Tables[TIME_CATEGORY_PLAY].RealityTime.Hours = 0;
+		Tables[TIME_CATEGORY_PLAY].RealityTime.Minutes = 0;
+
+		Tables[TIME_CATEGORY_PLAY].IsUnderGood = true;
+		Tables[TIME_CATEGORY_PLAY].Name = "Play";
+	}
+
+	// School
+	{
+		Tables[TIME_CATEGORY_SCHOOL].TargetTime.Hours = 6;
+		Tables[TIME_CATEGORY_SCHOOL].TargetTime.Minutes = 30;
+
+		Tables[TIME_CATEGORY_SCHOOL].RealityTime.Hours = 0;
+		Tables[TIME_CATEGORY_SCHOOL].RealityTime.Minutes = 0;
+
+		Tables[TIME_CATEGORY_SCHOOL].IsUnderGood = true;
+		Tables[TIME_CATEGORY_SCHOOL].Name = "School";
+	}
+
+	// Education
+	{
+		Tables[TIME_CATEGORY_EDUCATION].TargetTime.Hours = 3;
+		Tables[TIME_CATEGORY_EDUCATION].TargetTime.Minutes = 1;
+
+		Tables[TIME_CATEGORY_EDUCATION].RealityTime.Hours = 0;
+		Tables[TIME_CATEGORY_EDUCATION].RealityTime.Minutes = 0;
+
+		Tables[TIME_CATEGORY_EDUCATION].IsUnderGood = false;
+		Tables[TIME_CATEGORY_EDUCATION].Name = "Education";
+	}
+
+	// Programming
+	{
+		Tables[TIME_CATEGORY_PROGRAMMING].TargetTime.Hours = 4;
+		Tables[TIME_CATEGORY_PROGRAMMING].TargetTime.Minutes = 59;
+
+		Tables[TIME_CATEGORY_PROGRAMMING].RealityTime.Hours = 0;
+		Tables[TIME_CATEGORY_PROGRAMMING].RealityTime.Minutes = 0;
+
+		Tables[TIME_CATEGORY_PROGRAMMING].IsUnderGood = false;
+		Tables[TIME_CATEGORY_PROGRAMMING].Name = "Programming";
+	}
+
+	// Awake
+	{
+		Tables[TIME_CATEGORY_AWAKE].TargetTime.Hours = 16;
+		Tables[TIME_CATEGORY_AWAKE].TargetTime.Minutes = 0;
+
+		Tables[TIME_CATEGORY_AWAKE].RealityTime.Hours = 0;
+		Tables[TIME_CATEGORY_AWAKE].RealityTime.Minutes = 0;
+
+		Tables[TIME_CATEGORY_AWAKE].IsUnderGood = false;
+		Tables[TIME_CATEGORY_AWAKE].Name = "Awake";
+	}
+}
+
 internal process_entry_result
 ProcessEntry(char *Input, char *Output)
 {
 	process_entry_result Result = {};
 
 	raw_entry_data RawEntryData = {};
+	// parse entry data
 	{
 		RawEntryData.HourFirstDigit = *Input++;
 		RawEntryData.HourSecondDigit = *Input++;
@@ -449,53 +492,63 @@ ProcessEntry(char *Input, char *Output)
 	// copy RawEntryData and rest of line to Output
 	{
 		for(uint32_t RawEntryDataElementsIndex = 0;
-			RawEntryData.Elements[RawEntryDataElementsIndex] != 0;
-		   )
+			RawEntryData.Elements[RawEntryDataElementsIndex] != '\0';
+			++RawEntryDataElementsIndex)
 		{
 			*Output++ = RawEntryData.Elements[RawEntryDataElementsIndex];
 			++Result.CharsPushed;
 		}
 
-		while(*Output != '\n')
+		for(;;)
 		{
-			*Output++ = *Input++;
+			*Output = *Input++;
 			++Result.CharsPushed;
+
+			if(*Output == '\n')
+			{
+				break;
+			}
+
+			++Output;
 		}
 	}
 
+	// fill out Entry
 	{
 		Result.Entry.StartTime.Hour = ConvertToUInt32(RawEntryData.HourFirstDigit, 
-														  RawEntryData.HourSecondDigit);
+													  RawEntryData.HourSecondDigit);
 		Result.Entry.StartTime.Minute = ConvertToUInt32(RawEntryData.MinuteFirstDigit, 
-															RawEntryData.MinuteSecondDigit);
+														RawEntryData.MinuteSecondDigit);
 
-		if(Equals("Sleep", RawEntryData.Category))
+		if(Equals(RawEntryData.Category, "Sleep"))
 		{
 			Result.Entry.Category = TIME_CATEGORY_SLEEP;
 		}
-		else if(Equals("Play", RawEntryData.Category))
+		else if(Equals(RawEntryData.Category, "Play"))
 		{
 			Result.Entry.Category = TIME_CATEGORY_PLAY;
 		}
-		else if(Equals("School", RawEntryData.Category))
+		else if(Equals(RawEntryData.Category, "School"))
 		{
 			Result.Entry.Category = TIME_CATEGORY_SCHOOL;
 		}
-		else if(Equals("Education", RawEntryData.Category))
+		else if(Equals(RawEntryData.Category, "Education"))
 		{
 			Result.Entry.Category = TIME_CATEGORY_EDUCATION;
 		}
-		else if(Equals("Programming", RawEntryData.Category))
+		else if(Equals(RawEntryData.Category, "Programming"))
 		{
 			Result.Entry.Category = TIME_CATEGORY_PROGRAMMING;
 		}
-		else if(Equals("Awake", RawEntryData.Category))
+		else if(Equals(RawEntryData.Category, "Awake"))
 		{
 			Result.Entry.Category = TIME_CATEGORY_AWAKE;
 		}
 		else
 		{
-			fprintf("Error: unknown category: %s\n", RawEntryData.Category);
+			Assert(false);
+			// TODO: Make this more descriptive (like the line number or day)
+			fprintf(stderr, "Error: unknown category: %s\n", RawEntryData.Category);
 			exit(1);
 		}
 	}
@@ -503,22 +556,11 @@ ProcessEntry(char *Input, char *Output)
 	return Result;
 }
 
-#define TABLE_ROWS 8
-#define TABLE_COLUMNS 39
-#define TABLE_SIZE (TABLE_ROWS * TABLE_COLUMNS)
-
-#define TABLES_PER_ROW 3
-
-#define NEWLINE_SIZE 2
-#define ROW_OF_TABLES_SPACES_PER_LINE (TABLES_PER_ROW - 1)
-#define ROW_OF_TABLES_LINE_SIZE ((TABLE_COLUMNS * TABLES_PER_ROW) + ROW_OF_TABLES_SPACES_PER_LINE + NEWLINE_SIZE)
-
-#define HOUR_COLUMN 13
-#define ANALYSIS_COLUMN 31
-
 internal void
 FillTableBuffer(char *Buffer, table Table)
 {
+	char *BufferStart = Buffer;
+
 	bool32 IsUnder = (Table.RealityTime < Table.TargetTime);
 	char GoodAnalysis[] = "(GOOD)";
 	char BadAnalysis[] = "(BAD)";
@@ -535,12 +577,8 @@ FillTableBuffer(char *Buffer, table Table)
 	// line 1
 	{
 		*Buffer++ = ' ';
-		for(uint32_t Col = 1;
-			Col < (TABLE_COLUMNS - 1);
-			++Col)
-		{
-			*Buffer++ = '_';
-		}
+		uint32_t Col = 1;
+		Copy(&Buffer, '_', &Col, (TABLE_COLUMNS - 1));
 		*Buffer++ = ' ';
 	}
 
@@ -551,36 +589,17 @@ FillTableBuffer(char *Buffer, table Table)
 
 		*Buffer++ = '|';
 		uint32_t Col = 1;
-		for(;
-			Col < NameStartCol;
-			++Col)
-		{
-			*Buffer++ = ' ';
-		}
-		for(;
-			Col < NameLength;
-			++Col)
-		{
-			*Buffer++ = *Table.Name++;
-		}
-		for(;
-			Col < (TABLE_COLUMNS - 1);
-			++Col)
-		{
-			*Buffer++ = ' ';
-		}
+		Copy(&Buffer, ' ', &Col, NameStartCol);
+		Copy(&Buffer, Table.Name, &Col);
+		Copy(&Buffer, ' ', &Col, (TABLE_COLUMNS - 1));
 		*Buffer++ = '|';
 	}
 
 	// line 3
 	{
 		*Buffer++ = '|';
-		for(uint32_t Col = 1;
-			Col < (TABLE_COLUMNS - 1);
-			++Col)
-		{
-			*Buffer++ = '-';
-		}
+		uint32_t Col = 1;
+		Copy(&Buffer, '-', &Col, (TABLE_COLUMNS - 1));
 		*Buffer++ = '|';
 	}
 
@@ -595,19 +614,49 @@ FillTableBuffer(char *Buffer, table Table)
 			Line < 2;
 			++Line)
 		{
-			uint32_t CharsAdded = Copy(Intros[Line], Buffer);
-			Buffer += CharsAdded;
-
-			uint32_t Col = CharsAdded;
-			for(;
-				Col < HOUR_COLUMN;
-				++Col)
+			uint32_t Col = 0;
+			Copy(&Buffer, Intros[Line], &Col);
+			Copy(&Buffer, ' ', &Col, HOUR_COLUMN);
 			{
-				*Buffer++ = ' ';
-			}
+				number2_char Hours = ConvertToChar(Table.TimeElapses[Line].Hours);
+				number2_char Minutes = ConvertToChar(Table.TimeElapses[Line].Minutes);
 
-			number2_char Hours = ConvertToChar(Table.TimeElapses[Line].Hours);
-			number2_char Minutes = ConvertToChar(Table.TimeElapses[Line].Minutes);
+				*Buffer++ = Hours.FirstDigit;
+				*Buffer++ = Hours.SecondDigit;
+				*Buffer++ = ':';
+				*Buffer++ = Minutes.FirstDigit;
+				*Buffer++ = Minutes.SecondDigit;
+				Col += 5;
+			}
+			Copy(&Buffer, " hours", &Col);
+			Copy(&Buffer, ' ', &Col, ANALYSIS_COLUMN);
+			Copy(&Buffer, Analysis, &Col);
+			Copy(&Buffer, ' ', &Col, (TABLE_COLUMNS - 1));
+			*Buffer++ = '|';
+		}
+	}
+
+	// line 6
+	{
+		*Buffer++ = '|';
+		uint32_t Col = 1;
+		Copy(&Buffer, ' ', &Col, HOUR_COLUMN);
+		Copy(&Buffer, '-', &Col, HOUR_END_COLUMN);
+		Copy(&Buffer, ' ', &Col, ANALYSIS_COLUMN);
+		Copy(&Buffer, Analysis, &Col);
+		Copy(&Buffer, ' ', &Col, (TABLE_COLUMNS - 1));
+		*Buffer++ = '|';
+	}
+
+	// line 7
+	{
+		uint32_t Col = 0;
+		Copy(&Buffer, "| Result:", &Col);
+		Copy(&Buffer, ' ', &Col, HOUR_COLUMN);
+		{
+			time_elapse Difference = (Table.RealityTime - Table.TargetTime);
+			number2_char Hours = ConvertToChar(Difference.Hours);
+			number2_char Minutes = ConvertToChar(Difference.Minutes);
 
 			*Buffer++ = Hours.FirstDigit;
 			*Buffer++ = Hours.SecondDigit;
@@ -615,60 +664,31 @@ FillTableBuffer(char *Buffer, table Table)
 			*Buffer++ = Minutes.FirstDigit;
 			*Buffer++ = Minutes.SecondDigit;
 			Col += 5;
-
-			CharsAdded = Copy(" hours", Buffer);
-			Buffer += CharsAdded;
-			Col += CharsAdded;
-
-			for(;
-				Col < HOUR_COLUMN;
-				++Col)
-			{
-				*Buffer++ = ' ';
-			}
-
-			CharsAdded = Copy(Analysis, Buffer);
-			Buffer += CharsAdded;
-			Col += CharsAdded;
-
-			for(;
-				Col < (TABLE_COLUMNS - 1);
-				++Col)
-			{
-				*Buffer++ = ' ';
-			}
-
-			*Buffer++ = '|';
-
 		}
-	}
-
-	// line 6
-	{
-#define HOUR_LENGTH 11
-#define HOUR_END_COLUMN (HOUR_COLUMN + HOUR_LENGTH)
+		if(IsUnder)
+		{
+			Copy(&Buffer, " hours under", &Col);
+		}
+		else
+		{
+			Copy(&Buffer, " hours over", &Col);
+		}
+		Copy(&Buffer, ' ', &Col, ANALYSIS_COLUMN);
+		Copy(&Buffer, Analysis, &Col);
+		Copy(&Buffer, ' ', &Col, (TABLE_COLUMNS - 1));
 		*Buffer++ = '|';
-		for(;
-			Col < HOUR_COLUMN;
-			++Col)
-		{
-			*Buffer++ = ' ';
-		}
-		for(;
-			Col < (HOUR_END_COLUMN + 1);
-			++Col)
-		{
-			*Buffer++ = '-';
-		}
-	}
-
-	// line 7
-	{
 	}
 
 	// line 8
 	{
+		*Buffer++ = '|';
+		uint32_t Col = 1;
+		Copy(&Buffer, '_', &Col, (TABLE_COLUMNS - 1));
+		*Buffer++ = '|';
 	}
+
+	uint64_t CharsWrote = (Buffer - BufferStart);
+	Assert(CharsWrote == TABLE_SIZE);
 }
 
 internal process_day_result
@@ -682,15 +702,14 @@ ProcessDay(char *Input, char *Output)
 		Line < 3;
 		++Line)
 	{
-		uint32_t CharsPushed = PushLine(&Input[InputCharsProcessed], 
+		uint32_t CharsCopied = CopyLine(&Input[InputCharsProcessed], 
 										&Output[OutputCharsPushed]);
-
-		InputCharsProcessed += CharsPushed;
-		OutputCharsPushed += CharsPushed;
+		InputCharsProcessed += CharsCopied;
+		OutputCharsPushed += CharsCopied;
 	}
 
 	table Tables[6];
-	// fill Tables (really just the RealityTime member)
+	// fill Tables (just have to set RealityTime)
 	{
 		FillWithDefaultValues(Tables);
 
@@ -705,15 +724,17 @@ ProcessDay(char *Input, char *Output)
 
 			entry CurEntry = ProcessEntryResult.Entry;
 
-			if((Input[InputCharsProcessed] == PROCESSED_ENTRY_FLAG) || 
-			   (Input[InputCharsProcessed] == UNPROCESSED_ENTRY_FLAG))
+			if(Input[InputCharsProcessed] == '\r')
 			{
 				// reached next day
+				Output[OutputCharsPushed++] = Input[InputCharsProcessed++]; // '\r'
+				Output[OutputCharsPushed++] = Input[InputCharsProcessed++]; // '\n'
+
 				break;
 			}
 			else if(PrevEntry.Category != TIME_CATEGORY_NULL)
 			{
-				entry TimeElapsed = (CurEntry.StartTime - PrevEntry.StartTime);
+				time_elapse TimeElapsed = (CurEntry.StartTime - PrevEntry.StartTime);
 				Tables[PrevEntry.Category].RealityTime += TimeElapsed;
 				Tables[TIME_CATEGORY_AWAKE].RealityTime += TimeElapsed;
 			}
@@ -724,59 +745,73 @@ ProcessDay(char *Input, char *Output)
 
 	// insert tables
 	{
-		char TableBuffer[TABLE_SIZE];
-		for(uint32_t TableIndex;
+		char TableBuffer_[TABLE_SIZE];
+		char *TableBuffer = TableBuffer_;
+		uint32_t BaseOutputIndex = OutputCharsPushed;
+		uint32_t NumberOfTableRows = Ceil((float)ArrayCount(Tables) / (float)TABLES_PER_ROW);
+		for(uint32_t TableIndex = 0;
 			TableIndex < ArrayCount(Tables);
 			++TableIndex)
 		{
+			TableBuffer = TableBuffer_;
 			FillTableBuffer(TableBuffer, Tables[TableIndex]);
+
+			uint32_t Row = ((TableIndex / TABLES_PER_ROW) + 1);
+			bool32 OnLastRow = (Row == NumberOfTableRows);
+			uint32_t TablesThisRow = OnLastRow ? ((TableIndex % TABLES_PER_ROW) + 1) : TABLES_PER_ROW;
+
+			uint32_t TotalDistanceBetweenTables = ((TablesThisRow - 1) * DISTANCE_BETWEEN_TABLES_HORIZONTAL);
+			uint32_t ThisRowOfTablesLineSize = ((TABLE_COLUMNS * TablesThisRow) + TotalDistanceBetweenTables + NEWLINE_SIZE);
 
 			uint32_t ColumnInRow = (TableIndex % TABLES_PER_ROW);
 			for(uint32_t TableRow = 0;
-				TableRow < TABLE_ROW;
+				TableRow < TABLE_ROWS;
 				++TableRow)
 			{
 				// copy a single row from the table to Output
-				uint32_t OutputIndex = ((TableRow * ROW_OF_TABLES_LINE_SIZE) + (ColumnInRow * TABLE_COLUMNS));
+				uint32_t OutputIndex = (BaseOutputIndex + 
+										((TableRow * ThisRowOfTablesLineSize) + (ColumnInRow * TOTAL_TABLE_COLUMNS)));
 				for(uint32_t TableColumn = 0;
 					TableColumn < TABLE_COLUMNS;
 					++TableColumn)
 				{
-					&Output[OutputIndex++] = *TableBuffer++;
+					Output[OutputIndex++] = *TableBuffer++;
+					++OutputCharsPushed;
 				}
 
-				if(ColumnInRow == (TABLES_PER_ROW - 1))
+				if((ColumnInRow == (TABLES_PER_ROW - 1)) ||
+				   (TableIndex == (ArrayCount(Tables) - 1)))
 				{
 					// last table in row
 					Output[OutputIndex++] = '\r';
 					Output[OutputIndex++] = '\n';
+					OutputCharsPushed += 2;
 
-					if(TableRow == (TABLE_ROW - 1))
+					if(TableRow == (TABLE_ROWS - 1))
 					{
-						// last row of last table
+						// last row of last table in row
 						Output[OutputIndex++] = '\r';
 						Output[OutputIndex++] = '\n';
+						OutputCharsPushed += 2;
+
+						BaseOutputIndex = OutputCharsPushed;
 					}
 				}
 				else
 				{
-					Output[OutputIndex++] = ' ';
+					for(uint32_t Space = 0;
+						Space < DISTANCE_BETWEEN_TABLES_HORIZONTAL;
+						++Space)
+					{
+						Output[OutputIndex++] = ' ';
+						++OutputCharsPushed;
+					}
 				}
 			}
 		}
 	}
 
-	// calculate number of characterss added
-	{
-		uint32_t NumberOfTableRows = Ceil((float)NumTimeCategories / (float)TABLES_PER_ROW);
-		uint32_t NumberOfLines = (NumberOfTableRows * TABLE_ROWS);
-		uint32_t SizeOfTables = (NumberOfLines * ROW_OF_TABLES_LINE_SIZE);
-
-		uint32_t SizeOfNewlines = (NumberOfTableRows * NEWLINE_SIZE);
-
-		uint32_t TotalSize = (SizeOfTables + SizeOfNewlines);
-		OutputCharsPushed += TotalSize;
-	}
+	Output[0] = ENTRY_PROCESSED_FLAG;
 
 	process_day_result Result;
 	Result.InputCharsProcessed = InputCharsProcessed;
@@ -788,8 +823,6 @@ ProcessDay(char *Input, char *Output)
 int
 main(int argc, char *argv[])
 {
-	table_info TableInfo;
-
 	HANDLE InputFile = CreateFile("time_raw.txt",
 								  GENERIC_READ,
 								  FILE_SHARE_READ,
@@ -811,7 +844,7 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if(InputFileSize_.QuadPart > MaxInputFileSize)
+	if(InputFileSize_.QuadPart > MAX_INPUT_FILE_SIZE)
 	{
 		fprintf(stderr, "Error: file too big.\n");
 		exit(1);
@@ -825,7 +858,7 @@ main(int argc, char *argv[])
 
 	DWORD BytesRead;
 	if(!ReadFile(InputFile,
-				 InputFileContents,
+				 InputContents,
 				 InputFileSize,
 				 &BytesRead,
 				 NULL))
@@ -855,20 +888,17 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	uint32_t OutputFileSize = (InputFileSize * TableToEntryRatio);
+	uint32_t OutputFileSize = (InputFileSize * TABLES_TO_ENTRY_RATIO);
 	char *OutputContents = (char *)VirtualAlloc(NULL,
 												OutputFileSize,
 												MEM_COMMIT | MEM_RESERVE,
 												PAGE_EXECUTE_READWRITE);
 	uint32_t OutputContentsSize = 0;
 
-#define ENTRY_PROCESSED_FLAG '#'
-#define ENTRY_UNPROCESSED_FLAG '@'
-
-	Assert((InputFileContents[0] == ENTRY_PROCESSED_FLAG) ||
-		   (InputFileContents[0] == ENTRY_UNPROCESSED_FLAG));
-	if((InputFileContents[0] != ENTRY_PROCESSED_FLAG) &&
-	   (InputFileContents[0] != ENTRY_UNPROCESSED_FLAG))
+	Assert((InputContents[0] == ENTRY_PROCESSED_FLAG) ||
+		   (InputContents[0] == ENTRY_UNPROCESSED_FLAG));
+	if((InputContents[0] != ENTRY_PROCESSED_FLAG) &&
+	   (InputContents[0] != ENTRY_UNPROCESSED_FLAG))
 	{
 		fprintf(stderr, "Error: input file has incorrect format (first character must be '#' or '@')\n");
 		exit(1);
@@ -877,20 +907,42 @@ main(int argc, char *argv[])
 	uint32_t InputFileCharIndex = 0;
 	while(InputFileCharIndex < InputFileSize)
 	{
-		char c = InputFileContents[InputFileCharIndex];
+		char c = InputContents[InputFileCharIndex];
+
+		if(c == END_OF_FILE_FLAG)
+		{
+			break;
+		}
+
 		Assert((c == ENTRY_PROCESSED_FLAG) ||
 			   (c == ENTRY_UNPROCESSED_FLAG));
+		
+		if(c == ENTRY_UNPROCESSED_FLAG)
+		{
+			process_day_result ProcessDayResult = ProcessDay(&InputContents[InputFileCharIndex], 
+															 &OutputContents[OutputContentsSize]);
 
-		process_day_result EntryResult = ProcessDay(&InputFileContents[InputFileCharIndex], 
-													&OutputContents[OutputContentsSize]);
-		InputFileCharIndex += EntryResult.InputCharsProcessed;
-		OutputContentsSize += EntryResult.OutputCharsPushed;
+			InputFileCharIndex += ProcessDayResult.InputCharsProcessed;
+			OutputContentsSize += ProcessDayResult.OutputCharsPushed;
+		}
+		else
+		{
+			while((InputContents[InputFileCharIndex] != ENTRY_UNPROCESSED_FLAG) &&
+				  (InputContents[InputFileCharIndex] != END_OF_FILE_FLAG))
+			{
+				uint32_t CharsCopied = CopyLine(&InputContents[InputFileCharIndex],
+												&OutputContents[OutputContentsSize]);
+
+				InputFileCharIndex += CharsCopied;
+				OutputContentsSize += CharsCopied;
+			}
+		}
 	}
 
 	DWORD BytesWritten;
 	if(!WriteFile(OutputFile,
-				  OutputFileContents,
-				  OutputFileSize,
+				  OutputContents,
+				  OutputContentsSize,
 				  &BytesWritten,
 				  NULL))
 	{

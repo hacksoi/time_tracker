@@ -94,7 +94,7 @@
 19:45 - Play:				twitch
 21:20 - Programming:		working on game
 22:20 - Play:				vim colorschemes
-23:10 - progrmaming:		learning vimscript to make a script that cycles through colorschemes
+23:10 - Programming:		learning vimscript to make a script that cycles through colorschemes
 01:50 - Play:
 03:30 - Sleep:				sleep
 
@@ -110,7 +110,7 @@
 21:10 - Education:			handmade hero day 80
 21:20 - Programming:		working on game
 23:00 - Play:
-23:45 - programing:			working on game
+23:45 - Programming:		working on game
 00:30 - Play:
 01:00 - Programming:		working on game
 03:10 - Play:
@@ -207,10 +207,13 @@
 
 @_________________________________________________
 
-02/08/2017 (Day 13)
+02/08/2017 (Day 14)
 03:45 - Sleep:
 10:45 - Play:
 11:35 - School:				leaving for school
 14:45 - Play:				home from school
 15:25 - Programming:		time_tracker
-16:25 - Play:				buying a bath robe
+18:45 - Play:				bill o'reilly
+19:30 - Programming:		time_tracker
+
+$ END
