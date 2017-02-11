@@ -1,78 +1,80 @@
-Monday,Wednesday
+Monday
+Wednesday
 {
 	Sleep
 	{
-		TargetTime=08:00;
-		BadCondition=NotEqual;
+		TargetTime = 8:00
+		BadCondition = NotEqual
 	}
 
 	Play
 	{
-		TargetTime=04:00;
-		BadCondition=Over;
+		TargetTime = 4:00
+		BadCondition = Over
 	}
 
 	School
 	{
-		TargetTime=05:00;
-		BadCondition=Over;
+		TargetTime = 5:00
+		BadCondition = Over
 	}
 
 	Education
 	{
-		TargetTime=04:00;
-		BadCondition=Under;
+		TargetTime = 4:00
+		BadCondition = Under
 	}
 
 	Programming
 	{
-		TargetTime=03:00;
-		BadCondition=Under;
+		TargetTime = 3:00
+		BadCondition = Under
 	}
 
 	Awake
 	{
-		TargetTime=16:00;
-		BadCondition=NotEqual;
+		TargetTime = 16:00
+		BadCondition = NotEqual
 	}
 }
 
-Tuesday,Thursday
+Tuesday
+Thursday
 {
 	Sleep
 	{
-		TargetTime=08:00;
-		BadCondition=NotEqual;
+		TargetTime = 8:00
+		BadCondition = NotEqual
 	}
 
 	Play
 	{
-		TargetTime=04:00;
-		BadCondition=Over;
+		TargetTime = 4:00
+		BadCondition = Over
 	}
 
 	School
 	{
-		TargetTime=06:00;
-		BadCondition=Over;
+		TargetTime = 6:00
+		BadCondition = Over
 	}
 
 	Education
 	{
-		TargetTime=03:00;
-		BadCondition=Under;
+		TargetTime = 3:00
+		BadCondition = Under
 	}
 
 	Programming
 	{
-		TargetTime=03:00;
-		BadCondition=Under;
+		TargetTime = 3:00
+		BadCondition = Under
 	}
 
 	Awake
 	{
-		TargetTime=16:00;
-		BadCondition=NotEqual;
+		TargetTime = 16:00
+		BadCondition = NotEqual
 	}
 }
 
@@ -80,70 +82,73 @@ Friday
 {
 	Sleep
 	{
-		TargetTime=08:00;
-		BadCondition=NotEqual;
+		TargetTime = 8:00
+		BadCondition = NotEqual
 	}
 
 	Play
 	{
-		TargetTime=04:00;
-		BadCondition=Over;
+		TargetTime = 4:00
+		BadCondition = Over
 	}
 
 	Education
 	{
-		TargetTime=06:00;
-		BadCondition=Under;
+		TargetTime = 6:00
+		BadCondition = Under
 	}
 
 	Programming
 	{
-		TargetTime=06:00;
-		BadCondition=Under;
+		TargetTime = 6:00
+		BadCondition = Under
 	}
 
 	Awake
 	{
-		TargetTime=16:00;
-		BadCondition=NotEqual;
+		TargetTime = 16:00
+		BadCondition = NotEqual
 	}
 }
 
-Saturday,Sunday
+Saturday
+Sunday
 {
 	Sleep
 	{
-		TargetTime=08:00;
-		BadCondition=NotEqual;
+		TargetTime = 8:00
+		BadCondition = NotEqual
 	}
 
 	Play
 	{
-		TargetTime=03:00;
-		BadCondition=Over;
+		TargetTime = 3:00
+		BadCondition = Over
 	}
 
 	School
 	{
-		TargetTime=03:30;
-		BadCondition=Over;
+		TargetTime = 3:30
+		BadCondition = Over
 	}
 
 	Education
 	{
-		TargetTime=05:00;
-		BadCondition=Under;
+		TargetTime = 5:00
+		BadCondition = Under
 	}
 
 	Programming
 	{
-		TargetTime=04:30;
-		BadCondition=Under;
+		TargetTime = 4:30
+		BadCondition = Under
 	}
 
 	Awake
 	{
-		TargetTime=16:00;
-		BadCondition=NotEqual;
+		TargetTime = 16:00
+		BadCondition = NotEqual
 	}
 }
+
+$ END

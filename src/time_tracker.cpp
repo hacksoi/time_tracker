@@ -1,301 +1,17 @@
+
+// TODO: Change process of parsing and printing hours
+// so that the first digit of the hour is not required for parsing and is not
+// printed for printing.
+
 #include <Windows.h>
 #include <stdio.h>
 #include <stdint.h>
 
 #include "util.h"
-
-// TODO(hacksoi): Consider a better method of determining the size of the
-// output file (possibly a pass over the input file to see how many entries
-// have been processed)
-// NOTE(hacksoi): I actually calculated around 6
-#define TABLES_TO_ENTRY_RATIO 8
-#define MAX_INPUT_FILE_SIZE (0xFFFFFFFF / TABLES_TO_ENTRY_RATIO)
-#define SIZE_OF_TABLES 1940
-
-#define MAX_CATEGORY_NAME_LENGTH 32
-#define ENTRY_FORMAT_LENGTH (8 + MAX_CATEGORY_NAME_LENGTH)
-
-//
-// NOTE(hacksoi): Variables for processing tables 
-//
-
-#define SIZEOF_NEWLINE 2
-#define BLANK_LINES_PER_DAY 2
-#define SIZEOF_NULL_TERMINATOR 1
-
-#define LAST_LINE_FLAG '$'
-#define ENTRY_PROCESSED_FLAG '#'
-#define ENTRY_UNPROCESSED_FLAG '@'
-
-#define TABLE_ROWS 8
-#define TABLE_COLUMNS 39
-#define TABLE_SIZE (TABLE_ROWS * TABLE_COLUMNS)
-
-#define TABLES_PER_ROW 3
-
-#define HOUR_COLUMN 13
-#define ANALYSIS_COLUMN 31
-
-#define HOUR_LENGTH 11
-#define HOUR_END_COLUMN (HOUR_COLUMN + HOUR_LENGTH)
-
-#define DISTANCE_BETWEEN_TABLES_HORIZONTAL 1
-#define TOTAL_TABLE_COLUMNS (TABLE_COLUMNS + DISTANCE_BETWEEN_TABLES_HORIZONTAL)
-
-struct time
-{
-	uint32_t Hour;
-	uint32_t Minute;
-};
-
-struct time_elapse
-{
-	uint32_t Hours;
-	uint32_t Minutes;
-
-	bool IsNegative;
-};
-
-inline uint32_t
-ConvertToMinutes(time A)
-{
-	uint32_t Result = ((A.Hour * 60) + A.Minute);
-
-	return Result;
-}
-
-inline uint32_t
-ConvertToMinutes(time_elapse A)
-{
-	uint32_t Result = ((A.Hours * 60) + A.Minutes);
-
-	return Result;
-}
-
-inline bool32
-operator>(time A, time B)
-{
-	bool32 Result = true;
-
-	if(A.Hour < B.Hour)
-	{
-		Result = false;
-	}
-	else if((A.Hour == B.Hour) && 
-			(A.Minute < B.Minute))
-	{
-		Result = false;
-	}
-
-	return Result;
-}
-
-inline bool32
-operator>(time_elapse A, time_elapse B)
-{
-	bool32 Result = true;
-
-	if(A.Hours < B.Hours)
-	{
-		Result = false;
-	}
-	else if((A.Hours == B.Hours) && 
-			(A.Minutes < B.Minutes))
-	{
-		Result = false;
-	}
-
-	return Result;
-}
-
-inline bool32
-operator<(time A, time B)
-{
-	bool32 Result = (B > A);
-
-	return Result;
-}
-
-inline bool32
-operator<(time_elapse A, time_elapse B)
-{
-	bool32 Result = (B > A);
-
-	return Result;
-}
-
-// NOTE(hacksoi): _always_ assumes A is meant to be after B (in terms of time)
-// and will add 24 hours to A if needed
-inline time_elapse
-operator-(time A, time B)
-{
-	if(A < B)
-	{
-		A.Hour += 24;
-	}
-
-	uint32_t ATotalMinutes = ConvertToMinutes(A);
-	uint32_t BTotalMinutes = ConvertToMinutes(B);
-
-	uint32_t ResultTotalMinutes = (ATotalMinutes - BTotalMinutes);
-
-	time_elapse Result;
-	Result.Hours = (ResultTotalMinutes / 60);
-	Result.Minutes = (ResultTotalMinutes % 60);
-
-	return Result;
-}
-
-inline time_elapse
-operator-(time_elapse A, time_elapse B)
-{
-	time_elapse Result = {};
-	if(A < B)
-	{
-		Result.IsNegative = true;
-
-		time_elapse Temp = A;
-		A = B;
-		B = Temp;
-	}
-
-	uint32_t ATotalMinutes = ConvertToMinutes(A);
-	uint32_t BTotalMinutes = ConvertToMinutes(B);
-
-	uint32_t ResultTotalMinutes = (ATotalMinutes - BTotalMinutes);
-
-	Result.Hours = (ResultTotalMinutes / 60);
-	Result.Minutes = (ResultTotalMinutes % 60);
-
-	return Result;
-}
-
-inline time_elapse
-operator+(time_elapse A, time_elapse B)
-{
-	uint32_t ATotalMinutes = ConvertToMinutes(A);
-	uint32_t BTotalMinutes = ConvertToMinutes(B);
-
-	uint32_t ResultTotalMinutes = (ATotalMinutes + BTotalMinutes);
-
-	time_elapse Result;
-	Result.Hours = (ResultTotalMinutes / 60);
-	Result.Minutes = (ResultTotalMinutes % 60);
-
-	return Result;
-}
-
-inline time_elapse &
-operator+=(time_elapse &A, time_elapse B)
-{
-	A = A + B;
-
-	return A;
-}
-
-struct number2_char
-{
-	char FirstDigit;
-	char SecondDigit;
-};
-
-inline number2_char
-ConvertTo2Char(uint32_t A)
-{
-	Assert(A < 99);
-
-	uint32_t SecondDigit = (A % 10);
-	uint32_t FirstDigit = (A / 10);
-
-	number2_char Result;
-	Result.FirstDigit = (char)('0' + FirstDigit);
-	Result.SecondDigit = (char)('0' + SecondDigit);
-
-	return Result;
-}
-
-union raw_entry_data
-{
-	struct
-	{
-		char HourFirstDigit;
-		char HourSecondDigit;
-
-		char Colon;
-
-		char MinuteFirstDigit;
-		char MinuteSecondDigit;
-
-		char FirstSpace;
-		char Dash;
-		char SecondSpace;
-
-		char Category[MAX_CATEGORY_NAME_LENGTH];
-	};
-
-	char Elements[ENTRY_FORMAT_LENGTH];
-};
-
-struct entry
-{
-	time StartTime;
-	time_category Category;
-};
-
-enum bad_condition
-{
-	BAD_CONDITION_UNDER,
-	BAD_CONDITION_OVER,
-	BAD_CONDITION_NOT_EQUAL
-};
-
-struct time_category
-{
-	union
-	{
-		struct
-		{
-			time_elapse TargetTime;
-			time_elapse RealityTime;
-		};
-
-		time_elapse TimeElapses[2];
-	};
-
-	bad_condition BadCondition;
-
-	char *Name;
-};
-
-struct process_day_result
-{
-	uint32_t SrcCharsProcessed;
-	uint32_t DestCharsAdded;
-};
-
-struct process_entry_result
-{
-	uint32_t CharsPushed;
-	entry Entry;
-};
-
-internal bool32
-Equals(char *A, char *B)
-{
-	bool32 Result = true;
-
-	while((*A != '\0') &&
-		  (*B != '\0'))
-	{
-		if(*A++ != *B++)
-		{
-			Result = false;
-			break;
-		}
-	}
-
-	return Result;
-}
+#include "windows_util.h"
+#include "string_util.h"
+#include "time_util.h"
+#include "time_tracker.h"
 
 inline uint32_t
 Ceil(float A)
@@ -315,15 +31,17 @@ Ceil(float A)
 	return Result;
 }
 
-inline uint32_t
-Length(char *A)
+inline number2_char
+ConvertTo2Char(uint32_t A)
 {
-	uint32_t Result = 0;
+	Assert(A < 99);
 
-	while(*A++ != '\0')
-	{
-		++Result;
-	}
+	uint32_t SecondDigit = (A % 10);
+	uint32_t FirstDigit = (A / 10);
+
+	number2_char Result;
+	Result.FirstDigit = (char)('0' + FirstDigit);
+	Result.SecondDigit = (char)('0' + SecondDigit);
 
 	return Result;
 }
@@ -339,251 +57,105 @@ ConvertToUInt32(char FirstDigitChar, char SecondDigitChar)
 	return Result;
 }
 
-internal uint32_t
-CopyLine(char *Src, char *Dest)
+inline uint32_t
+ConvertToUInt32(number2_char TwoChars)
 {
-	uint32_t Result = 0;
-
-	for(;;)
-	{
-		*Dest = *Src++;
-		++Result;
-
-		if(*Dest++ == '\n')
-		{
-			break;
-		}
-	}
+	uint32_t Result = ConvertToUInt32(TwoChars.FirstDigit, TwoChars.SecondDigit);
 
 	return Result;
 }
 
-internal uint32_t
-Copy(char *Src, char *Dest)
+inline bool32
+IsCharNumerical(char A)
 {
-	uint32_t Result = 0;
-	while(*Src != '\0')
-	{
-		*Dest++ = *Src++;
-		++Result;
-	}
+	char c = ('0' + A);
+	bool32 Result = ((c >= '0') &&
+					 (c >= '9'));
 
 	return Result;
 }
 
-internal void
-Copy(char **Buffer, char *Src, uint32_t *Column)
+internal time_characters
+ConvertToTimeCharacters(char *Src)
 {
-	while(*Src != '\0')
+	time_characters Result = {};
+
+	uint32_t CharsBeforeColon = 0;
+	while(Src[++CharsBeforeColon] != ':')
 	{
-		**Buffer = *Src++;
-		++(*Buffer);
-		++(*Column);
-	}
-}
-
-internal void
-Copy(char **Buffer, char C, uint32_t *StartColumn, uint32_t EndColumn)
-{
-	while(*StartColumn < EndColumn)
-	{
-		**Buffer = C;
-		++(*Buffer);
-		++(*StartColumn);
-	}
-}
-
-internal void
-FillWithDefaultValues(time_category *Tables)
-{
-	// Sleep
-	{
-		Tables[TIME_CATEGORY_SLEEP].TargetTime.Hours = 8;
-		Tables[TIME_CATEGORY_SLEEP].TargetTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_SLEEP].RealityTime.Hours = 0;
-		Tables[TIME_CATEGORY_SLEEP].RealityTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_SLEEP].IsUnderGood = true;
-		Tables[TIME_CATEGORY_SLEEP].Name = "Sleep";
 	}
 
-	// Play
+	Assert(CharsBeforeColon > 0);
+	if(CharsBeforeColon == 1)
 	{
-		Tables[TIME_CATEGORY_PLAY].TargetTime.Hours = 3;
-		Tables[TIME_CATEGORY_PLAY].TargetTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_PLAY].RealityTime.Hours = 0;
-		Tables[TIME_CATEGORY_PLAY].RealityTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_PLAY].IsUnderGood = true;
-		Tables[TIME_CATEGORY_PLAY].Name = "Play";
-	}
-
-	// School
-	{
-		Tables[TIME_CATEGORY_SCHOOL].TargetTime.Hours = 6;
-		Tables[TIME_CATEGORY_SCHOOL].TargetTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_SCHOOL].RealityTime.Hours = 0;
-		Tables[TIME_CATEGORY_SCHOOL].RealityTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_SCHOOL].IsUnderGood = true;
-		Tables[TIME_CATEGORY_SCHOOL].Name = "School";
-	}
-
-	// Education
-	{
-		Tables[TIME_CATEGORY_EDUCATION].TargetTime.Hours = 3;
-		Tables[TIME_CATEGORY_EDUCATION].TargetTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_EDUCATION].RealityTime.Hours = 0;
-		Tables[TIME_CATEGORY_EDUCATION].RealityTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_EDUCATION].IsUnderGood = false;
-		Tables[TIME_CATEGORY_EDUCATION].Name = "Education";
-	}
-
-	// Programming
-	{
-		Tables[TIME_CATEGORY_PROGRAMMING].TargetTime.Hours = 4;
-		Tables[TIME_CATEGORY_PROGRAMMING].TargetTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_PROGRAMMING].RealityTime.Hours = 0;
-		Tables[TIME_CATEGORY_PROGRAMMING].RealityTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_PROGRAMMING].IsUnderGood = false;
-		Tables[TIME_CATEGORY_PROGRAMMING].Name = "Programming";
-	}
-
-	// Awake
-	{
-		Tables[TIME_CATEGORY_AWAKE].TargetTime.Hours = 16;
-		Tables[TIME_CATEGORY_AWAKE].TargetTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_AWAKE].RealityTime.Hours = 0;
-		Tables[TIME_CATEGORY_AWAKE].RealityTime.Minutes = 0;
-
-		Tables[TIME_CATEGORY_AWAKE].IsUnderGood = false;
-		Tables[TIME_CATEGORY_AWAKE].Name = "Awake";
-	}
-}
-
-internal process_entry_result
-ProcessEntry(char *Src, char *Dest)
-{
-	process_entry_result Result = {};
-
-	raw_entry_data RawEntryData = {};
-	// parse entry data
-	{
-		RawEntryData.HourFirstDigit = *Src++;
-		RawEntryData.HourSecondDigit = *Src++;
-
-		RawEntryData.Colon = *Src++;
-
-		RawEntryData.MinuteFirstDigit = *Src++;
-		RawEntryData.MinuteSecondDigit = *Src++;
-
-		RawEntryData.FirstSpace = *Src++;
-		RawEntryData.Dash = *Src++;
-		RawEntryData.SecondSpace = *Src++;
-
-		uint32_t CategoryLength = 0;
-		while(*Src != ':')
-		{
-			RawEntryData.Category[CategoryLength++] = *Src++;
-		}
-	}
-
-	// copy RawEntryData and rest of line to Dest
-	{
-		for(uint32_t RawEntryDataElementsIndex = 0;
-			RawEntryData.Elements[RawEntryDataElementsIndex] != '\0';
-			++RawEntryDataElementsIndex)
-		{
-			*Dest++ = RawEntryData.Elements[RawEntryDataElementsIndex];
-			++Result.CharsPushed;
-		}
-
-		for(;;)
-		{
-			*Dest = *Src++;
-			++Result.CharsPushed;
-
-			if(*Dest == '\n')
-			{
-				break;
-			}
-
-			++Dest;
-		}
-	}
-
-	// fill out Entry
-	{
-		Result.Entry.StartTime.Hour = ConvertToUInt32(RawEntryData.HourFirstDigit, 
-													  RawEntryData.HourSecondDigit);
-		Result.Entry.StartTime.Minute = ConvertToUInt32(RawEntryData.MinuteFirstDigit, 
-														RawEntryData.MinuteSecondDigit);
-
-		if(Equals(RawEntryData.Category, "Sleep"))
-		{
-			Result.Entry.Category = TIME_CATEGORY_SLEEP;
-		}
-		else if(Equals(RawEntryData.Category, "Play"))
-		{
-			Result.Entry.Category = TIME_CATEGORY_PLAY;
-		}
-		else if(Equals(RawEntryData.Category, "School"))
-		{
-			Result.Entry.Category = TIME_CATEGORY_SCHOOL;
-		}
-		else if(Equals(RawEntryData.Category, "Education"))
-		{
-			Result.Entry.Category = TIME_CATEGORY_EDUCATION;
-		}
-		else if(Equals(RawEntryData.Category, "Programming"))
-		{
-			Result.Entry.Category = TIME_CATEGORY_PROGRAMMING;
-		}
-		else if(Equals(RawEntryData.Category, "Awake"))
-		{
-			Result.Entry.Category = TIME_CATEGORY_AWAKE;
-		}
-		else if(Equals(RawEntryData.Category, "**Executing"))
-		{
-			Result.Entry.Category = TIME_CATEGORY_DUMMY;
-		}
-		else
-		{
-			Assert(false);
-			// TODO: Make this more descriptive (like the line number or day)
-			fprintf(stderr, "Error: unknown category: %s\n", RawEntryData.Category);
-			exit(1);
-		}
-	}
-
-	return Result;
-}
-
-internal void
-FillTableBuffer(char *Buffer, table Table)
-{
-	char *BufferStart = Buffer;
-
-	bool32 IsUnder = (Table.RealityTime < Table.TargetTime);
-	char GoodAnalysis[] = "(GOOD)";
-	char BadAnalysis[] = "(BAD)";
-	char *Analysis;
-	if(Table.IsUnderGood)
-	{
-		Analysis = IsUnder ? GoodAnalysis : BadAnalysis;
+		Result.Hour.FirstDigit = '0';
 	}
 	else
 	{
-		Analysis = IsUnder ? BadAnalysis : GoodAnalysis;
+		if(IsCharNumerical(Src[CharsBeforeColon - 2]))
+		{
+			Result.Hour.FirstDigit = Src[CharsBeforeColon - 2];
+		}
+		else
+		{
+			Result.Hour.FirstDigit = '0';
+		}
 	}
+
+	Result.Hour.SecondDigit = Src[CharsBeforeColon - 1];
+	Result.Minute.FirstDigit = Src[CharsBeforeColon + 1];
+	Result.Minute.FirstDigit = Src[CharsBeforeColon + 2];
+
+	return Result;
+}
+
+internal time_elapse
+ConvertToTimeElapse(char *Src)
+{
+	time_characters TimeCharacters = ConvertToTimeCharacters(Src);
+
+	time_elapse Result = {};
+	Result.Hours = ConvertToUInt32(TimeCharacters.Hours);
+	Result.Minutes = ConvertToUInt32(TimeCharacters.Minutes);
+
+	return Result;
+}
+
+internal entry
+ProcessEntry(char *Src)
+{
+	entry Result = {};
+
+	// parse time
+	{
+		char TimeBuffer[4];
+		uint32_t DestCharsAdded = GetToken(&Src, TimeBuffer);
+		Assert(DestCharsAdded <= ArrayCount(TimeBuffer));
+
+		time_characters TimeCharacters = ConvertToTimeCharacters(TimeBuffer);
+		Result.StartTime.Hour = ConvertToUInt32(TimeCharacters.Hour);
+		Result.StartTime.Minute = ConvertToUInt32(TimeCharacters.Minute);
+	}
+
+	// parse category name
+	{
+		// get rid of dash
+		GetToken(&Src, Result.CategoryName);
+		GetToken(&Src, Result.CategoryName, ':');
+	}
+
+	return Result;
+}
+
+internal void
+FillTableBuffer(char *Buffer, time_category TimeCategory)
+{
+	char *BufferStart = Buffer;
+
+	comparison TimeComparsion = Compare(Table.RealityTime, Table.TargetTime);
+	char GoodAnalysis[] = "(GOOD)";
+	char BadAnalysis[] = "(BAD)";
+	char *Analysis = (TimeComparision == TimeCategory.BadCondition) ? BadAnalysis : GoodAnalysis;
 
 	// line 1
 	{
@@ -601,7 +173,7 @@ FillTableBuffer(char *Buffer, table Table)
 		*Buffer++ = '|';
 		uint32_t Col = 1;
 		Copy(&Buffer, ' ', &Col, NameStartCol);
-		Copy(&Buffer, Table.Name, &Col);
+		Copy(&Buffer, TimeCategory.Name, &Col);
 		Copy(&Buffer, ' ', &Col, (TABLE_COLUMNS - 1));
 		*Buffer++ = '|';
 	}
@@ -629,10 +201,10 @@ FillTableBuffer(char *Buffer, table Table)
 			Copy(&Buffer, Intros[Line], &Col);
 			Copy(&Buffer, ' ', &Col, HOUR_COLUMN);
 			{
-				number2_char Hours = ConvertTo2Char(Table.TimeElapses[Line].Hours);
-				number2_char Minutes = ConvertTo2Char(Table.TimeElapses[Line].Minutes);
+				number2_char Hours = ConvertTo2Char(TimeCategory.TimeElapses[Line].Hours);
+				number2_char Minutes = ConvertTo2Char(TimeCategory.TimeElapses[Line].Minutes);
 
-				*Buffer++ = Hours.FirstDigit;
+				*Buffer++ = (Hours.FirstDigit == '0') ? ' ' : Hours.FirstDigit;
 				*Buffer++ = Hours.SecondDigit;
 				*Buffer++ = ':';
 				*Buffer++ = Minutes.FirstDigit;
@@ -665,24 +237,28 @@ FillTableBuffer(char *Buffer, table Table)
 		Copy(&Buffer, "| Result:", &Col);
 		Copy(&Buffer, ' ', &Col, HOUR_COLUMN);
 		{
-			time_elapse Difference = (Table.RealityTime - Table.TargetTime);
+			time_elapse Difference = (TimeCategory.RealityTime - TimeCategory.TargetTime);
 			number2_char Hours = ConvertTo2Char(Difference.Hours);
 			number2_char Minutes = ConvertTo2Char(Difference.Minutes);
 
-			*Buffer++ = Hours.FirstDigit;
+			*Buffer++ = (Hours.FirstDigit == '0') ? ' ' : Hours.FirstDigit;
 			*Buffer++ = Hours.SecondDigit;
 			*Buffer++ = ':';
 			*Buffer++ = Minutes.FirstDigit;
 			*Buffer++ = Minutes.SecondDigit;
 			Col += 5;
 		}
-		if(IsUnder)
+		if(TimeComparison == COMPARISON_LESS)
 		{
 			Copy(&Buffer, " hours under", &Col);
 		}
-		else
+		else if(TimeComparison == COMPARISON_GREATER)
 		{
 			Copy(&Buffer, " hours over", &Col);
+		}
+		else
+		{
+			Copy(&Buffer, " hours exact", &Col);
 		}
 		Copy(&Buffer, ' ', &Col, ANALYSIS_COLUMN);
 		Copy(&Buffer, Analysis, &Col);
@@ -701,12 +277,6 @@ FillTableBuffer(char *Buffer, table Table)
 	uint64_t CharsWrote = (Buffer - BufferStart);
 	Assert(CharsWrote == TABLE_SIZE);
 }
-
-struct copy_day_to_last_entry_result
-{
-	uint32_t CharsCopied;
-	bool32 IsLastDay;
-};
 
 internal copy_day_to_last_entry_result
 CopyDayToLastEntry(char *Src, char *Dest)
@@ -762,52 +332,90 @@ InsertDummyEntry(char *Dest)
 	return Result;
 }
 
-internal process_day_result
-ProcessDay(char *Src, char *Dest)
+internal time_category *
+GetTimeCategory(char *CategoryName, day *Day)
 {
-	uint32_t SrcCharsProcessed = 0;
-	uint32_t DestCharsAdded = 0;
-
-	// advance 3 lines to get to first entry
-	for(uint32_t Line = 0;
-		Line < 3;
-		++Line)
+	time_category *TimeCategory = NULL;
+	for(uint32_t TimeCategoryIndex = 0;
+		TimeCategoryIndex < Day->TimeCategoryCount;
+		++TimeCategoryIndex)
 	{
-		uint32_t CharsCopied = CopyLine(&Src[SrcCharsProcessed], 
-										&Dest[DestCharsAdded]);
-		SrcCharsProcessed += CharsCopied;
-		DestCharsAdded += CharsCopied;
+		if(Equals(CategoryName, Day->TimeCategories[TimeCategoryIndex].Name))
+		{
+			TimeCategory = &Day->TimeCategories[TimeCategoryIndex];
+
+			break;
+		}
 	}
 
-	table Tables[6];
-	// fill Tables (just have to set RealityTime)
-	{
-		FillWithDefaultValues(Tables);
+	return TimeCategory;
+}
 
+internal process_day_result
+ProcessDay(char *Src, char *Dest, day Days[7])
+{
+	uint32_t SrcCharsScanned = 0;
+	uint32_t DestCharsAdded = 0;
+
+	day *Day;
+	// parse day name
+	{
+		// advance 2 lines to get to day
+		CopyLine(Src, &SrcCharsScanned, 
+				 Dest, &DestCharsAdded, 2);
+
+		char DayNameBuffer[MAX_DAY_NAME_SIZE];
+		GetToken(Src, DayNameBuffer);
+		for(uint32_t DayIndex = 0;
+			DayIndex < ArrayCount(Days);
+			++DayIndex)
+		{
+			if(Equals(DayNameBuffer, Days[DayIndex].Name))
+			{
+				Day = &Days[DayIndex];
+				break;
+			}
+		}
+
+		CopyLine(Src, &SrcCharsScanned, 
+				 Dest, &DestCharsAdded);
+	}
+
+	// clear Day->TimeCategory.RealityTime (it gets reused)
+	for(uint32_t TimeCategoryIndex = 0;
+		TimeCategoryIndex < Day->TimeCategoryCount;
+		++TimeCategoryIndex)
+	{
+		Day->TimeCategories[TimeCategoryIndex].RealityTime.Hours = 0;
+		Day->TimeCategories[TimeCategoryIndex].RealityTime.Minutes = 0;
+	}
+
+	// fill each Day->TimeCategory.RealityTime
+	{
 		entry PrevEntry = {};
-		PrevEntry.Category = TIME_CATEGORY_NULL;
 		for(;;)
 		{
-			process_entry_result ProcessEntryResult = ProcessEntry(&Src[SrcCharsProcessed], 
-																   &Dest[DestCharsAdded]);
-			SrcCharsProcessed += ProcessEntryResult.CharsPushed;
-			DestCharsAdded += ProcessEntryResult.CharsPushed;
-
-			entry CurEntry = ProcessEntryResult.Entry;
-			if(PrevEntry.Category != TIME_CATEGORY_NULL)
+			entry CurEntry = ProcessEntry(&Src[SrcCharsScanned], 
+										  &Dest[DestCharsAdded]);
+			if(PrevEntry.CategoryName[0] != '\0')
 			{
+				time_category *PrevTimeCategory = GetTimeCategory(PrevEntry.CategoryName, Day);
+
 				time_elapse TimeElapsed = (CurEntry.StartTime - PrevEntry.StartTime);
-				Tables[PrevEntry.Category].RealityTime += TimeElapsed;
-				if(PrevEntry.Category != TIME_CATEGORY_SLEEP)
+				PrevTimeCategory->RealityTime += TimeElapsed;
+				if(Equals(PrevEntry.CategoryName != "Sleep"))
 				{
-					Tables[TIME_CATEGORY_AWAKE].RealityTime += TimeElapsed;
+					time_category *AwakeTimeCategory = GetTimeCategory(PrevEntry.CategoryName, Day);
+					AwakeTimeCategory.RealityTime += TimeElapsed;
 				}
 			}
 
-			if(Src[SrcCharsProcessed] == '\r')
+			CopyLine(Src, &SrcCharsScanned, 
+					 Dest, &DestCharsAdded);
+			if(Src[SrcCharsScanned] == '\r')
 			{
-				Dest[DestCharsAdded++] = Src[SrcCharsProcessed++]; // '\r'
-				Dest[DestCharsAdded++] = Src[SrcCharsProcessed++]; // '\n'
+				CopyLine(Src, &SrcCharsScanned, 
+						 Dest, &DestCharsAdded);
 
 				break;
 			}
@@ -821,13 +429,13 @@ ProcessDay(char *Src, char *Dest)
 		char TableBuffer_[TABLE_SIZE];
 		char *TableBuffer = TableBuffer_;
 		uint32_t BaseDestIndex = DestCharsAdded;
-		uint32_t NumberOfTableRows = Ceil((float)ArrayCount(Tables) / (float)TABLES_PER_ROW);
+		uint32_t NumberOfTableRows = Ceil((float)Day->TimeCategoryCount / (float)TABLES_PER_ROW);
 		for(uint32_t TableIndex = 0;
-			TableIndex < ArrayCount(Tables);
+			TableIndex < Day->TimeCategoryCount);
 			++TableIndex)
 		{
 			TableBuffer = TableBuffer_;
-			FillTableBuffer(TableBuffer, Tables[TableIndex]);
+			FillTableBuffer(TableBuffer, Day->TimeCategories[TableIndex]);
 
 			uint32_t Row = ((TableIndex / TABLES_PER_ROW) + 1);
 			bool32 OnLastRow = (Row == NumberOfTableRows);
@@ -887,93 +495,157 @@ ProcessDay(char *Src, char *Dest)
 	Dest[0] = ENTRY_PROCESSED_FLAG;
 
 	process_day_result Result;
-	Result.SrcCharsProcessed = SrcCharsProcessed;
+	Result.SrcCharsScanned = SrcCharsScanned;
 	Result.DestCharsAdded = DestCharsAdded;
 
 	return Result;
 }
 
+internal void
+ParseConfigFile(char *ConfigFileContents, day Days[7])
+{
+	day *DaysProcessing[7];
+	uint32_t DaysProcessingCount = 0;
+
+	table *TimeCategoriesProcessing[MAX_TABLES];
+	uint32_t TimeCategoriesProcessingCount = 0;
+
+	config_file_state CurState = CONFIG_FILE_STATE_SEEKING_DAY;
+	uint32_t ContentsIndex = 0;
+	bool32 IsRunning = true;
+	while(IsRunning)
+	{
+		switch(CurState)
+		{
+			case CONFIG_FILE_STATE_SEEKING_DAY:
+			{
+				char DayNameBuffer[MAX_CONFIG_FILE_LINE_SIZE];
+				uint32_t TokenLength = GetToken(&ConfigFileContents, DayNameBuffer);
+				if(TokenLength > 0)
+				{
+					if(DayNameBuffer[0] == '{')
+					{
+						CurState = CONFIG_FILE_STATE_SEEKING_TABLE;
+					}
+					else if(DayNameBuffer[0] == '$')
+					{
+						IsRunning = false;
+					}
+					else
+					{
+						// figure out which day and add it to DaysProcessing
+						for(uint32_t DayIndex = 0;
+							DayIndex < ArrayCount(Days);
+							++DayIndex)
+						{
+							if(Equals(DayNameBuffer, Days[DayIndex].Name))
+							{
+								DaysProcessing[DaysProcessingCount++] = &Days[DayIndex];
+							}
+						}
+					}
+				}
+			} break;
+
+			case CONFIG_FILE_STATE_SEEKING_TIME_CATEGORY:
+			{
+				char TimeCategoryNameBuffer[MAX_CONFIG_FILE_LINE_SIZE];
+				uint32_t TokenLength = GetToken(&ConfigFileContents, TimeCategoryNameBuffer);
+				if(TokenLength > 0)
+				{
+					if(TimeCategoryNameBuffer[0] == '{')
+					{
+						CurState = CONFIG_FILE_STATE_SEEKING_TABLE_INFO;
+					}
+					else if(TimeCategoryNameBuffer[0] == '}')
+					{
+						CurState = CONFIG_FILE_STATE_SEEKING_DAY;
+					}
+					else
+					{
+						// add a time category to each of DaysProcessing
+						for(uint32_t DaysProcessingIndex = 0;
+							DaysProcessingIndex < DaysProcessingCount;
+							++DaysProcessingIIndex)
+						{
+							day *Day = DaysProcessing[DaysProcessingIndex];
+							time_category *NewTimeCategory = &DayToProcess->Tables[DayToProcess->TableCount++];
+							TimeCategoriesProcessing[TimeCategoriesProcessingCount++] = NewTimeCategory;
+
+							Copy(TimeCategoryNameBuffer, NewTimeCategory->Name);
+						}
+					}
+				}
+			} break;
+
+			case CONFIG_FILE_STATE_SEEKING_TABLE_TIME_CATEGORY_INFO:
+			{
+				char TableInfoNameBuffer[MAX_CONFIG_FILE_LINE_SIZE];
+				uint32_t TokenLength = GetToken(&ConfigFileContents, TableInfoNameBuffer);
+				if(TokenLength > 0)
+				{
+					if(TableNameBuffer[0] == '}')
+					{
+						CurState = CONFIG_FILE_STATE_SEEKING_TABLE;
+					}
+					else if(TableInfoNameBuffer[0] == 'T')//argetTime
+					{
+						GetToken(&ConfigFileContents, TableInfoNameBuffer);
+						Assert(TableInfoNameBuffer[0] == '=');
+						if(TableInfoNameBuffer[0] != '=')
+						{
+							fprintf("Error parsing config file: '=' missing.\n", TableInfoNameBuffer);
+							exit(1);
+						}
+
+						char TargetTimeBuffer[4];
+						uint32_t CharsGot = GetToken(&ConfigFileContents, TargetTimeBuffer);
+						Assert(CharsGot <= ArrayCount(TargetTimeBuffer));
+						time_elapse TargetTime = ConvertToTimeElapse(TargetTimeBuffer);
+						for(uint32_t TimeCategoriesProcessingIndex = 0;
+							TimeCategoriesProcessingIndex < TimeCategoriesProcessingCount;
+							++TimeCategoriesProcessingIndex)
+						{
+							time_category *TimeCategory = TimeCategoriesProcessing[TimeCategoriesProcessingIndex];
+							TimeCategory.TargetTime = TargetTime;
+						}
+					}
+					else if(TableInfoNameBuffer[0] == 'B')//adCondition
+					{
+
+					}
+					else
+					{
+						Assert(false);
+						TableInfoNameBuffer[TokenLength] = '\0';
+						fprintf("Error parsing config file: unknown table value: %s\n", TableInfoNameBuffer);
+						exit(1);
+					}
+				}
+			} break;
+		}
+
+		AdvanceToNextLine(&ConfigFileContents);
+	}
+}
+
 int
 main(int argc, char *argv[])
 {
-	HANDLE InputFile = CreateFile("time_raw.txt",
-								  GENERIC_READ,
-								  FILE_SHARE_READ,
-								  NULL,
-								  OPEN_EXISTING,
-								  FILE_ATTRIBUTE_NORMAL,
-								  NULL);
-
-	Assert(InputFile != INVALID_HANDLE_VALUE);
-	if(InputFile == INVALID_HANDLE_VALUE)
+	read_entire_file_result ReadConfigFileResult = ReadEntireFile("time_cfg.txt");
+	day DaysOfTheWeek[7] = {};
 	{
-		fprintf(stderr, "Error: failed to create handle to source file (time_raw.txt)\n");
-		exit(1);
+		DaysOfTheWeek[0].Name = "Monday";
+		DaysOfTheWeek[1].Name = "Tuesday";
+		DaysOfTheWeek[2].Name = "Wednesday";
+		DaysOfTheWeek[3].Name = "Thursday";
+		DaysOfTheWeek[4].Name = "Friday";
+		DaysOfTheWeek[5].Name = "Saturday";
+		DaysOfTheWeek[6].Name = "Sunday";
 	}
+	ParseConfigFile(ReadConfigFileResult.Contents, &DaysOfTheWeek);
 
-	LARGE_INTEGER InputFileSize_;
-	if(!GetFileSizeEx(InputFile, &InputFileSize_))
-	{
-		Assert(false);
-		fprintf(stderr, "Error: failed to read file size\n");
-		exit(1);
-	}
-
-	Assert(InputFileSize_.QuadPart <= MAX_INPUT_FILE_SIZE);
-	if(InputFileSize_.QuadPart > MAX_INPUT_FILE_SIZE)
-	{
-		fprintf(stderr, "Error: file too big.\n");
-		exit(1);
-	}
-
-	uint32_t InputFileSize = (uint32_t)InputFileSize_.QuadPart;
-	char *InputContents = (char *)VirtualAlloc(NULL,
-											   InputFileSize,
-											   MEM_COMMIT | MEM_RESERVE,
-											   PAGE_EXECUTE_READWRITE);
-
-	DWORD BytesRead;
-	if(!ReadFile(InputFile,
-				 InputContents,
-				 InputFileSize,
-				 &BytesRead,
-				 NULL))
-	{
-		Assert(false);
-		fprintf(stderr, "Error: failed to read source file (time_raw.txt).\n");
-		exit(1);
-	}
-
-	Assert(BytesRead == InputFileSize);
-	if(BytesRead != InputFileSize)
-	{
-		fprintf(stderr, "Error: read incorrect number of bytes: file size is %d but read %d.\n", 
-				InputFileSize, BytesRead);
-		exit(1);
-	}
-
-	HANDLE OutputFile = CreateFile("time_processed.txt",
-								   GENERIC_WRITE,
-								   0,
-								   NULL,
-								   CREATE_ALWAYS,
-								   FILE_ATTRIBUTE_NORMAL,
-								   NULL);
-
-	Assert(OutputFile != INVALID_HANDLE_VALUE);
-	if(OutputFile == INVALID_HANDLE_VALUE)
-	{
-		fprintf(stderr, "Error: failed to create handle to processed file (time_processed.txt)\n");
-		exit(1);
-	}
-
-	uint32_t OutputFileSize = (InputFileSize * TABLES_TO_ENTRY_RATIO);
-	char *OutputContents = (char *)VirtualAlloc(NULL,
-												OutputFileSize,
-												MEM_COMMIT | MEM_RESERVE,
-												PAGE_EXECUTE_READWRITE);
-	uint32_t OutputContentsSize = 0;
-
+	read_entire_file_result ReadInputFileResult = ReadEntireFile("time_raw.txt");
 	Assert((InputContents[0] == ENTRY_PROCESSED_FLAG) ||
 		   (InputContents[0] == ENTRY_UNPROCESSED_FLAG));
 	if((InputContents[0] != ENTRY_PROCESSED_FLAG) &&
@@ -983,10 +655,14 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	ConfigFile = LoadConfigFile();
-	DaysOfTheWeek = ParseConfigFile(ConfigFile);
-
+	uint32_t InputFileSize = ReadInputFileResult.FileSize;
+	char *InputContents = ReadInputFileResult.Contents;
 	uint32_t InputFileCharIndex = 0;
+
+	uint32_t OutputFileSize = (InputFileSize * TABLES_TO_ENTRY_RATIO);
+	char *OutputContents = (char *)VirtualAlloc(NULL, OutputFileSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	uint32_t OutputContentsSize = 0;
+
 	for(;;)
 	{
 		char c = InputContents[InputFileCharIndex];
@@ -1040,6 +716,21 @@ main(int argc, char *argv[])
 				OutputContentsSize += CharsCopied;
 			}
 		}
+	}
+
+	HANDLE OutputFile = CreateFile("time_processed.txt",
+								   GENERIC_WRITE,
+								   0,
+								   NULL,
+								   CREATE_ALWAYS,
+								   FILE_ATTRIBUTE_NORMAL,
+								   NULL);
+
+	Assert(OutputFile != INVALID_HANDLE_VALUE);
+	if(OutputFile == INVALID_HANDLE_VALUE)
+	{
+		fprintf(stderr, "Error: failed to create handle to processed file (time_processed.txt)\n");
+		exit(1);
 	}
 
 	DWORD BytesWritten;

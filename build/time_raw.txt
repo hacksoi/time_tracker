@@ -172,7 +172,7 @@ Monday | 02/06/2017 | (Day 11)
 @_________________________________________________
 
 Tuesday | 02/07/2017 | (Day 12)
-07:10 - Sleep:				sleep
+7:10  - Sleep:				sleep
 10:30 - Play:				woke up
 11:30 - School:				leaving
 14:30 - Programming:		thinking about why acceleration isn't working
@@ -186,7 +186,7 @@ Tuesday | 02/07/2017 | (Day 12)
 @_________________________________________________
 
 Wednesday | 02/08/2017 | (Day 13)
-03:15 - Sleep:
+3:15  - Sleep:
 10:00 - Play:				woke up
 10:35 - Programming:		time_tracker
 13:00 - School:				leaving for school
@@ -195,30 +195,30 @@ Wednesday | 02/08/2017 | (Day 13)
 19:00 - Programming:		time_tracker
 21:50 - Play:				more Norm
 23:30 - Programming:		time_tracker
-02:00 - Play:
-03:45 - Sleep:
+2:00  - Play:
+3:45  - Sleep:
 
 @_________________________________________________
 
 Thursday | 02/09/2017 | (Day 14)
-03:45 - Sleep:
+3:45  - Sleep:
 10:45 - Play:
 11:35 - School:				leaving for school
 14:45 - Play:				home from school
 15:25 - Programming:		time_tracker
 18:45 - Play:				bill o'reilly
 19:30 - Programming:		time_tracker
-00:25 - Play:				tyler1
-00:41 - Programming:		time_tracker
-00:50 - Play:				tyler1
-01:37 - Programming:		time_tracker
-02:26 - Play:
-04:45 - Sleep:
+0:25  - Play:				tyler1
+0:41  - Programming:		time_tracker
+0:50  - Play:				tyler1
+1:37  - Programming:		time_tracker
+2:26  - Play:
+4:45  - Sleep:
 
 @_________________________________________________
 
 Friday | 02/10/2017 | (Day 15)
-04:45 - Sleep:
+4:45  - Sleep:
 14:00 - Play:
 14:45 - Programming:		time_tracker
 18:20 - Play:				dad's gun
