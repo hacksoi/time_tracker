@@ -1,6 +1,6 @@
 @________________________________________________
 
-01/29/2017 (Day 1)
+Friday | 01/27/2017 | (Day 1)
 04:30 - Sleep:				good night
 13:15 - Play: 				woke up
 18:15 - Education:	 		handmade hero day 72
@@ -14,7 +14,7 @@
 
 @_________________________________________________
 
-01/30/2017 (Day 2)
+Saturday | 01/28/2017 | (Day 2)
 04:30 - Sleep:				good night
 13:10 - Play:				woke up
 13:40 - Play:
@@ -30,7 +30,8 @@
 
 @_________________________________________________
 
-01/31/2017 (Day 3)
+Sunday | 01/29/2017 | (Day 3)
+05:00 - Sleep: 				sleep
 16:00 - Play: 				woke up
 16:30 - Play:				twitch
 17:30 - Education:			handmade hero day 74
@@ -44,7 +45,8 @@
 
 @_________________________________________________
 
-02/01/2017 (Day 4)
+Monday | 01/30/2017 | (Day 4)
+03:50 - Sleep:				sleep
 10:20 - Play:				woke up
 11:05 - School:				leaving house
 15:30 - School:				leaving school
@@ -61,7 +63,8 @@
 
 @_________________________________________________
 
-02/02/2017 (Day 5)
+Tuesday | 01/31/2017 | (Day 5)
+04:15 - Sleep:				sleep
 10:10 - Play:				woke up
 10:35 - School:				last minute anthro hw. Fuck it’s long
 11:35 - School: 			leaving for school
@@ -72,7 +75,8 @@
 
 @_________________________________________________
 
-02/03/2017 (Day 6)
+Wednesday | 02/01/2017 | (Day 6)
+22:00 - Sleep:				sleep
 10:00 - Play:				woke up
 10:30 - Play:				
 11:00 - School:				leave for school
@@ -82,10 +86,12 @@
 19:45 - Programming:		working on cs570 assignment
 00:30 - Play:
 00:40 - Education:			handmade hero day 78
+02:00 - Sleep:
 
 @_________________________________________________
 
-02/04/2017 (Day 7)
+Thursday | 02/02/2017 | (Day 7)
+02:00 - Sleep:
 10:30 - Play:				woke up
 11:00 - Play:
 11:30 - School:				leave for school
@@ -100,7 +106,8 @@
 
 @_________________________________________________
 
-02/04/2017 (Day 8)
+Friday | 02/03/2017 | (Day 8)
+03:30 - Sleep:				sleep
 15:30 - Play:				woke up
 16:00 - Play:
 16:30 - Education:			handmade hero day 79
@@ -114,10 +121,12 @@
 00:30 - Play:
 01:00 - Programming:		working on game
 03:10 - Play:
+04:45 - Sleep:
 
 @_________________________________________________
 
-02/04/2017 (Day 9)
+Saturday | 02/04/2017 | (Day 9)
+04:45 - Sleep:
 15:30 - Play:				woke up
 16:00 - Play:
 16:30 - Education:			handmade hero day 80
@@ -134,7 +143,8 @@
 
 @_________________________________________________
 
-02/05/2017 (Day 10)
+Sunday | 02/05/2017 | (Day 10)
+05:45 - Sleep:				sleep
 15:00 - Play:				woke up
 15:30 - Play:				super bowl / hanging out with pat
 20:00 - Education:			handmade hero day 81
@@ -143,9 +153,10 @@
 05:00 - Play:
 07:30 - Sleep:				sleep
 
-#_________________________________________________
+@_________________________________________________
 
-02/06/2017 (Day 11)
+Monday | 02/06/2017 | (Day 11)
+07:30 - Sleep:				sleep
 12:00 - Play:				woke up
 13:00 - School:				leaving
 18:30 - Play:
@@ -158,32 +169,14 @@
 05:35 - Play:
 07:10 - Sleep:				sleep
 
- _____________________________________   _____________________________________   _____________________________________ 
-|                Sleep                | |                 Play                | |                 Play                |
-|-------------------------------------| |-------------------------------------| |-------------------------------------|
-| Target:    08:00 hours       (BAD)  | | Target:    06:45 hours       (GOOD) | | Target:    06:45 hours       (GOOD) |
-| Reality:   12:00 hours       (BAD)  | | Reality:   10:45 hours       (GOOD) | | Reality:   10:45 hours       (GOOD) |
-|            -----------       (BAD)  | |            -----------       (GOOD) | |            -----------       (GOOD) |
-| Result:    04:00 hours over  (BAD)  | | Result:    04:00 hours under (GOOD) | | Result:    04:00 hours under (GOOD) |
-|_____________________________________| |_____________________________________| |_____________________________________|
-
- _____________________________________   _____________________________________   _____________________________________ 
-|                School               | |                Awake                | |                 Play                |
-|-------------------------------------| |-------------------------------------| |-------------------------------------|
-| Target:    06:35 hours       (GOOD) | | Target:    06:35 hours       (BAD)  | | Target:    06:45 hours       (GOOD) |
-| Reality:   04:00 hours       (GOOD) | | Reality:   04:00 hours       (BAD)  | | Reality:   10:45 hours       (GOOD) |
-|            -----------       (GOOD) | |            -----------       (BAD)  | |            -----------       (GOOD) |
-| Result:    02:35 hours under (GOOD) | | Result:    02:35 hours over  (BAD)  | | Result:    04:00 hours under (GOOD) |
-|_____________________________________| |_____________________________________| |_____________________________________|
-
 @_________________________________________________
 
-02/07/2017 (Day 12)
+Tuesday | 02/07/2017 | (Day 12)
+07:10 - Sleep:				sleep
 10:30 - Play:				woke up
 11:30 - School:				leaving
 14:30 - Programming:		thinking about why acceleration isn't working
-15:45 - School:				leaving school
-17:00 - Play:
+15:45 - Play:				leaving school
 18:00 - Programming:		Spec'ing out time_tracker
 19:45 - Play:
 21:20 - Programming:		working on time_tracker
@@ -192,7 +185,7 @@
 
 @_________________________________________________
 
-02/08/2017 (Day 13)
+Wednesday | 02/08/2017 | (Day 13)
 03:15 - Sleep:
 10:00 - Play:				woke up
 10:35 - Programming:		time_tracker
@@ -207,7 +200,7 @@
 
 @_________________________________________________
 
-02/08/2017 (Day 14)
+Thursday | 02/09/2017 | (Day 14)
 03:45 - Sleep:
 10:45 - Play:
 11:35 - School:				leaving for school
@@ -215,5 +208,20 @@
 15:25 - Programming:		time_tracker
 18:45 - Play:				bill o'reilly
 19:30 - Programming:		time_tracker
+00:25 - Play:				tyler1
+00:41 - Programming:		time_tracker
+00:50 - Play:				tyler1
+01:37 - Programming:		time_tracker
+02:26 - Play:
+04:45 - Sleep:
+
+@_________________________________________________
+
+Friday | 02/10/2017 | (Day 15)
+04:45 - Sleep:
+14:00 - Play:
+14:45 - Programming:		time_tracker
+18:20 - Play:				dad's gun
+18:45 - Programming:		time_tracker
 
 $ END

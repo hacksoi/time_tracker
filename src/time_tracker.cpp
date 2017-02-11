@@ -19,9 +19,11 @@
 // NOTE(hacksoi): Variables for processing tables 
 //
 
-#define NEWLINE_SIZE 2
+#define SIZEOF_NEWLINE 2
+#define BLANK_LINES_PER_DAY 2
+#define SIZEOF_NULL_TERMINATOR 1
 
-#define END_OF_FILE_FLAG '$'
+#define LAST_LINE_FLAG '$'
 #define ENTRY_PROCESSED_FLAG '#'
 #define ENTRY_UNPROCESSED_FLAG '@'
 
@@ -39,19 +41,6 @@
 
 #define DISTANCE_BETWEEN_TABLES_HORIZONTAL 1
 #define TOTAL_TABLE_COLUMNS (TABLE_COLUMNS + DISTANCE_BETWEEN_TABLES_HORIZONTAL)
-
-enum time_category
-{
-	TIME_CATEGORY_SLEEP,
-	TIME_CATEGORY_PLAY,
-	TIME_CATEGORY_SCHOOL,
-	TIME_CATEGORY_EDUCATION,
-	TIME_CATEGORY_PROGRAMMING,
-	TIME_CATEGORY_AWAKE,
-
-	NumTimeCategories,
-	TIME_CATEGORY_NULL
-};
 
 struct time
 {
@@ -211,7 +200,7 @@ struct number2_char
 };
 
 inline number2_char
-ConvertToChar(uint32_t A)
+ConvertTo2Char(uint32_t A)
 {
 	Assert(A < 99);
 
@@ -253,7 +242,14 @@ struct entry
 	time_category Category;
 };
 
-struct table
+enum bad_condition
+{
+	BAD_CONDITION_UNDER,
+	BAD_CONDITION_OVER,
+	BAD_CONDITION_NOT_EQUAL
+};
+
+struct time_category
 {
 	union
 	{
@@ -266,15 +262,15 @@ struct table
 		time_elapse TimeElapses[2];
 	};
 
-	bool32 IsUnderGood;
+	bad_condition BadCondition;
 
 	char *Name;
 };
 
 struct process_day_result
 {
-	uint32_t InputCharsProcessed;
-	uint32_t OutputCharsPushed;
+	uint32_t SrcCharsProcessed;
+	uint32_t DestCharsAdded;
 };
 
 struct process_entry_result
@@ -344,21 +340,32 @@ ConvertToUInt32(char FirstDigitChar, char SecondDigitChar)
 }
 
 internal uint32_t
-CopyLine(char *Input, char *Output)
+CopyLine(char *Src, char *Dest)
 {
 	uint32_t Result = 0;
 
 	for(;;)
 	{
-		*Output = *Input++;
+		*Dest = *Src++;
 		++Result;
 
-		if(*Output == '\n')
+		if(*Dest++ == '\n')
 		{
 			break;
 		}
+	}
 
-		++Output;
+	return Result;
+}
+
+internal uint32_t
+Copy(char *Src, char *Dest)
+{
+	uint32_t Result = 0;
+	while(*Src != '\0')
+	{
+		*Dest++ = *Src++;
+		++Result;
 	}
 
 	return Result;
@@ -387,7 +394,7 @@ Copy(char **Buffer, char C, uint32_t *StartColumn, uint32_t EndColumn)
 }
 
 internal void
-FillWithDefaultValues(table *Tables)
+FillWithDefaultValues(time_category *Tables)
 {
 	// Sleep
 	{
@@ -404,7 +411,7 @@ FillWithDefaultValues(table *Tables)
 	// Play
 	{
 		Tables[TIME_CATEGORY_PLAY].TargetTime.Hours = 3;
-		Tables[TIME_CATEGORY_PLAY].TargetTime.Minutes = 15;
+		Tables[TIME_CATEGORY_PLAY].TargetTime.Minutes = 0;
 
 		Tables[TIME_CATEGORY_PLAY].RealityTime.Hours = 0;
 		Tables[TIME_CATEGORY_PLAY].RealityTime.Minutes = 0;
@@ -416,7 +423,7 @@ FillWithDefaultValues(table *Tables)
 	// School
 	{
 		Tables[TIME_CATEGORY_SCHOOL].TargetTime.Hours = 6;
-		Tables[TIME_CATEGORY_SCHOOL].TargetTime.Minutes = 30;
+		Tables[TIME_CATEGORY_SCHOOL].TargetTime.Minutes = 0;
 
 		Tables[TIME_CATEGORY_SCHOOL].RealityTime.Hours = 0;
 		Tables[TIME_CATEGORY_SCHOOL].RealityTime.Minutes = 0;
@@ -428,7 +435,7 @@ FillWithDefaultValues(table *Tables)
 	// Education
 	{
 		Tables[TIME_CATEGORY_EDUCATION].TargetTime.Hours = 3;
-		Tables[TIME_CATEGORY_EDUCATION].TargetTime.Minutes = 1;
+		Tables[TIME_CATEGORY_EDUCATION].TargetTime.Minutes = 0;
 
 		Tables[TIME_CATEGORY_EDUCATION].RealityTime.Hours = 0;
 		Tables[TIME_CATEGORY_EDUCATION].RealityTime.Minutes = 0;
@@ -440,7 +447,7 @@ FillWithDefaultValues(table *Tables)
 	// Programming
 	{
 		Tables[TIME_CATEGORY_PROGRAMMING].TargetTime.Hours = 4;
-		Tables[TIME_CATEGORY_PROGRAMMING].TargetTime.Minutes = 59;
+		Tables[TIME_CATEGORY_PROGRAMMING].TargetTime.Minutes = 0;
 
 		Tables[TIME_CATEGORY_PROGRAMMING].RealityTime.Hours = 0;
 		Tables[TIME_CATEGORY_PROGRAMMING].RealityTime.Minutes = 0;
@@ -463,53 +470,53 @@ FillWithDefaultValues(table *Tables)
 }
 
 internal process_entry_result
-ProcessEntry(char *Input, char *Output)
+ProcessEntry(char *Src, char *Dest)
 {
 	process_entry_result Result = {};
 
 	raw_entry_data RawEntryData = {};
 	// parse entry data
 	{
-		RawEntryData.HourFirstDigit = *Input++;
-		RawEntryData.HourSecondDigit = *Input++;
+		RawEntryData.HourFirstDigit = *Src++;
+		RawEntryData.HourSecondDigit = *Src++;
 
-		RawEntryData.Colon = *Input++;
+		RawEntryData.Colon = *Src++;
 
-		RawEntryData.MinuteFirstDigit = *Input++;
-		RawEntryData.MinuteSecondDigit = *Input++;
+		RawEntryData.MinuteFirstDigit = *Src++;
+		RawEntryData.MinuteSecondDigit = *Src++;
 
-		RawEntryData.FirstSpace = *Input++;
-		RawEntryData.Dash = *Input++;
-		RawEntryData.SecondSpace = *Input++;
+		RawEntryData.FirstSpace = *Src++;
+		RawEntryData.Dash = *Src++;
+		RawEntryData.SecondSpace = *Src++;
 
 		uint32_t CategoryLength = 0;
-		while(*Input != ':')
+		while(*Src != ':')
 		{
-			RawEntryData.Category[CategoryLength++] = *Input++;
+			RawEntryData.Category[CategoryLength++] = *Src++;
 		}
 	}
 
-	// copy RawEntryData and rest of line to Output
+	// copy RawEntryData and rest of line to Dest
 	{
 		for(uint32_t RawEntryDataElementsIndex = 0;
 			RawEntryData.Elements[RawEntryDataElementsIndex] != '\0';
 			++RawEntryDataElementsIndex)
 		{
-			*Output++ = RawEntryData.Elements[RawEntryDataElementsIndex];
+			*Dest++ = RawEntryData.Elements[RawEntryDataElementsIndex];
 			++Result.CharsPushed;
 		}
 
 		for(;;)
 		{
-			*Output = *Input++;
+			*Dest = *Src++;
 			++Result.CharsPushed;
 
-			if(*Output == '\n')
+			if(*Dest == '\n')
 			{
 				break;
 			}
 
-			++Output;
+			++Dest;
 		}
 	}
 
@@ -543,6 +550,10 @@ ProcessEntry(char *Input, char *Output)
 		else if(Equals(RawEntryData.Category, "Awake"))
 		{
 			Result.Entry.Category = TIME_CATEGORY_AWAKE;
+		}
+		else if(Equals(RawEntryData.Category, "**Executing"))
+		{
+			Result.Entry.Category = TIME_CATEGORY_DUMMY;
 		}
 		else
 		{
@@ -618,8 +629,8 @@ FillTableBuffer(char *Buffer, table Table)
 			Copy(&Buffer, Intros[Line], &Col);
 			Copy(&Buffer, ' ', &Col, HOUR_COLUMN);
 			{
-				number2_char Hours = ConvertToChar(Table.TimeElapses[Line].Hours);
-				number2_char Minutes = ConvertToChar(Table.TimeElapses[Line].Minutes);
+				number2_char Hours = ConvertTo2Char(Table.TimeElapses[Line].Hours);
+				number2_char Minutes = ConvertTo2Char(Table.TimeElapses[Line].Minutes);
 
 				*Buffer++ = Hours.FirstDigit;
 				*Buffer++ = Hours.SecondDigit;
@@ -655,8 +666,8 @@ FillTableBuffer(char *Buffer, table Table)
 		Copy(&Buffer, ' ', &Col, HOUR_COLUMN);
 		{
 			time_elapse Difference = (Table.RealityTime - Table.TargetTime);
-			number2_char Hours = ConvertToChar(Difference.Hours);
-			number2_char Minutes = ConvertToChar(Difference.Minutes);
+			number2_char Hours = ConvertTo2Char(Difference.Hours);
+			number2_char Minutes = ConvertTo2Char(Difference.Minutes);
 
 			*Buffer++ = Hours.FirstDigit;
 			*Buffer++ = Hours.SecondDigit;
@@ -691,21 +702,81 @@ FillTableBuffer(char *Buffer, table Table)
 	Assert(CharsWrote == TABLE_SIZE);
 }
 
-internal process_day_result
-ProcessDay(char *Input, char *Output)
+struct copy_day_to_last_entry_result
 {
-	uint32_t InputCharsProcessed = 0;
-	uint32_t OutputCharsPushed = 0;
+	uint32_t CharsCopied;
+	bool32 IsLastDay;
+};
+
+internal copy_day_to_last_entry_result
+CopyDayToLastEntry(char *Src, char *Dest)
+{
+	copy_day_to_last_entry_result Result = {};
+
+	uint32_t BlankLinesCopied = 0;
+	for(;;)
+	{
+		uint32_t CharsCopied = CopyLine(Src, Dest);
+		Src += CharsCopied;
+		Dest += CharsCopied;
+		Result.CharsCopied += CharsCopied;
+
+		if((*Src == ENTRY_PROCESSED_FLAG) ||
+		   (*Src == ENTRY_UNPROCESSED_FLAG))
+		{
+			Result.IsLastDay = false;
+
+			break;
+		}
+		else if(*Src == LAST_LINE_FLAG)
+		{
+			Result.IsLastDay = true;
+
+			break;
+		}
+	}
+
+	Result.CharsCopied -= SIZEOF_NEWLINE;
+
+	return Result;
+}
+
+internal uint32_t
+InsertDummyEntry(char *Dest)
+{
+	char DummyEntry[] = "00:00 - **Executing:\r\n";
+
+	SYSTEMTIME CurrentTime;
+	GetLocalTime(&CurrentTime);
+
+	number2_char CurrentHour = ConvertTo2Char(CurrentTime.wHour);
+	number2_char CurrentMinute = ConvertTo2Char(CurrentTime.wMinute);
+
+	DummyEntry[0] = CurrentHour.FirstDigit;
+	DummyEntry[1] = CurrentHour.SecondDigit;
+	DummyEntry[3] = CurrentMinute.FirstDigit;
+	DummyEntry[4] = CurrentMinute.SecondDigit;
+
+	uint32_t Result = Copy(DummyEntry, Dest);
+
+	return Result;
+}
+
+internal process_day_result
+ProcessDay(char *Src, char *Dest)
+{
+	uint32_t SrcCharsProcessed = 0;
+	uint32_t DestCharsAdded = 0;
 
 	// advance 3 lines to get to first entry
-	for(int Line = 0;
+	for(uint32_t Line = 0;
 		Line < 3;
 		++Line)
 	{
-		uint32_t CharsCopied = CopyLine(&Input[InputCharsProcessed], 
-										&Output[OutputCharsPushed]);
-		InputCharsProcessed += CharsCopied;
-		OutputCharsPushed += CharsCopied;
+		uint32_t CharsCopied = CopyLine(&Src[SrcCharsProcessed], 
+										&Dest[DestCharsAdded]);
+		SrcCharsProcessed += CharsCopied;
+		DestCharsAdded += CharsCopied;
 	}
 
 	table Tables[6];
@@ -717,26 +788,28 @@ ProcessDay(char *Input, char *Output)
 		PrevEntry.Category = TIME_CATEGORY_NULL;
 		for(;;)
 		{
-			process_entry_result ProcessEntryResult = ProcessEntry(&Input[InputCharsProcessed], 
-																   &Output[OutputCharsPushed]);
-			InputCharsProcessed += ProcessEntryResult.CharsPushed;
-			OutputCharsPushed += ProcessEntryResult.CharsPushed;
+			process_entry_result ProcessEntryResult = ProcessEntry(&Src[SrcCharsProcessed], 
+																   &Dest[DestCharsAdded]);
+			SrcCharsProcessed += ProcessEntryResult.CharsPushed;
+			DestCharsAdded += ProcessEntryResult.CharsPushed;
 
 			entry CurEntry = ProcessEntryResult.Entry;
-
-			if(Input[InputCharsProcessed] == '\r')
-			{
-				// reached next day
-				Output[OutputCharsPushed++] = Input[InputCharsProcessed++]; // '\r'
-				Output[OutputCharsPushed++] = Input[InputCharsProcessed++]; // '\n'
-
-				break;
-			}
-			else if(PrevEntry.Category != TIME_CATEGORY_NULL)
+			if(PrevEntry.Category != TIME_CATEGORY_NULL)
 			{
 				time_elapse TimeElapsed = (CurEntry.StartTime - PrevEntry.StartTime);
 				Tables[PrevEntry.Category].RealityTime += TimeElapsed;
-				Tables[TIME_CATEGORY_AWAKE].RealityTime += TimeElapsed;
+				if(PrevEntry.Category != TIME_CATEGORY_SLEEP)
+				{
+					Tables[TIME_CATEGORY_AWAKE].RealityTime += TimeElapsed;
+				}
+			}
+
+			if(Src[SrcCharsProcessed] == '\r')
+			{
+				Dest[DestCharsAdded++] = Src[SrcCharsProcessed++]; // '\r'
+				Dest[DestCharsAdded++] = Src[SrcCharsProcessed++]; // '\n'
+
+				break;
 			}
 
 			PrevEntry = CurEntry;
@@ -747,7 +820,7 @@ ProcessDay(char *Input, char *Output)
 	{
 		char TableBuffer_[TABLE_SIZE];
 		char *TableBuffer = TableBuffer_;
-		uint32_t BaseOutputIndex = OutputCharsPushed;
+		uint32_t BaseDestIndex = DestCharsAdded;
 		uint32_t NumberOfTableRows = Ceil((float)ArrayCount(Tables) / (float)TABLES_PER_ROW);
 		for(uint32_t TableIndex = 0;
 			TableIndex < ArrayCount(Tables);
@@ -758,43 +831,43 @@ ProcessDay(char *Input, char *Output)
 
 			uint32_t Row = ((TableIndex / TABLES_PER_ROW) + 1);
 			bool32 OnLastRow = (Row == NumberOfTableRows);
-			uint32_t TablesThisRow = OnLastRow ? ((TableIndex % TABLES_PER_ROW) + 1) : TABLES_PER_ROW;
+			uint32_t TablesThisRow = OnLastRow ? (((ArrayCount(Tables) - 1) % TABLES_PER_ROW) + 1) : TABLES_PER_ROW;
 
 			uint32_t TotalDistanceBetweenTables = ((TablesThisRow - 1) * DISTANCE_BETWEEN_TABLES_HORIZONTAL);
-			uint32_t ThisRowOfTablesLineSize = ((TABLE_COLUMNS * TablesThisRow) + TotalDistanceBetweenTables + NEWLINE_SIZE);
+			uint32_t ThisRowOfTablesLineSize = ((TABLE_COLUMNS * TablesThisRow) + TotalDistanceBetweenTables + SIZEOF_NEWLINE);
 
 			uint32_t ColumnInRow = (TableIndex % TABLES_PER_ROW);
 			for(uint32_t TableRow = 0;
 				TableRow < TABLE_ROWS;
 				++TableRow)
 			{
-				// copy a single row from the table to Output
-				uint32_t OutputIndex = (BaseOutputIndex + 
-										((TableRow * ThisRowOfTablesLineSize) + (ColumnInRow * TOTAL_TABLE_COLUMNS)));
+				// copy a single row from the table to Dest
+				uint32_t DestIndex = (BaseDestIndex + 
+									  ((TableRow * ThisRowOfTablesLineSize) + (ColumnInRow * TOTAL_TABLE_COLUMNS)));
 				for(uint32_t TableColumn = 0;
 					TableColumn < TABLE_COLUMNS;
 					++TableColumn)
 				{
-					Output[OutputIndex++] = *TableBuffer++;
-					++OutputCharsPushed;
+					Dest[DestIndex++] = *TableBuffer++;
+					++DestCharsAdded;
 				}
 
 				if((ColumnInRow == (TABLES_PER_ROW - 1)) ||
 				   (TableIndex == (ArrayCount(Tables) - 1)))
 				{
 					// last table in row
-					Output[OutputIndex++] = '\r';
-					Output[OutputIndex++] = '\n';
-					OutputCharsPushed += 2;
+					Dest[DestIndex++] = '\r';
+					Dest[DestIndex++] = '\n';
+					DestCharsAdded += 2;
 
 					if(TableRow == (TABLE_ROWS - 1))
 					{
 						// last row of last table in row
-						Output[OutputIndex++] = '\r';
-						Output[OutputIndex++] = '\n';
-						OutputCharsPushed += 2;
+						Dest[DestIndex++] = '\r';
+						Dest[DestIndex++] = '\n';
+						DestCharsAdded += 2;
 
-						BaseOutputIndex = OutputCharsPushed;
+						BaseDestIndex = DestCharsAdded;
 					}
 				}
 				else
@@ -803,19 +876,19 @@ ProcessDay(char *Input, char *Output)
 						Space < DISTANCE_BETWEEN_TABLES_HORIZONTAL;
 						++Space)
 					{
-						Output[OutputIndex++] = ' ';
-						++OutputCharsPushed;
+						Dest[DestIndex++] = ' ';
+						++DestCharsAdded;
 					}
 				}
 			}
 		}
 	}
 
-	Output[0] = ENTRY_PROCESSED_FLAG;
+	Dest[0] = ENTRY_PROCESSED_FLAG;
 
 	process_day_result Result;
-	Result.InputCharsProcessed = InputCharsProcessed;
-	Result.OutputCharsPushed = OutputCharsPushed;
+	Result.SrcCharsProcessed = SrcCharsProcessed;
+	Result.DestCharsAdded = DestCharsAdded;
 
 	return Result;
 }
@@ -831,6 +904,7 @@ main(int argc, char *argv[])
 								  FILE_ATTRIBUTE_NORMAL,
 								  NULL);
 
+	Assert(InputFile != INVALID_HANDLE_VALUE);
 	if(InputFile == INVALID_HANDLE_VALUE)
 	{
 		fprintf(stderr, "Error: failed to create handle to source file (time_raw.txt)\n");
@@ -840,10 +914,12 @@ main(int argc, char *argv[])
 	LARGE_INTEGER InputFileSize_;
 	if(!GetFileSizeEx(InputFile, &InputFileSize_))
 	{
+		Assert(false);
 		fprintf(stderr, "Error: failed to read file size\n");
 		exit(1);
 	}
 
+	Assert(InputFileSize_.QuadPart <= MAX_INPUT_FILE_SIZE);
 	if(InputFileSize_.QuadPart > MAX_INPUT_FILE_SIZE)
 	{
 		fprintf(stderr, "Error: file too big.\n");
@@ -863,10 +939,12 @@ main(int argc, char *argv[])
 				 &BytesRead,
 				 NULL))
 	{
+		Assert(false);
 		fprintf(stderr, "Error: failed to read source file (time_raw.txt).\n");
 		exit(1);
 	}
 
+	Assert(BytesRead == InputFileSize);
 	if(BytesRead != InputFileSize)
 	{
 		fprintf(stderr, "Error: read incorrect number of bytes: file size is %d but read %d.\n", 
@@ -882,6 +960,7 @@ main(int argc, char *argv[])
 								   FILE_ATTRIBUTE_NORMAL,
 								   NULL);
 
+	Assert(OutputFile != INVALID_HANDLE_VALUE);
 	if(OutputFile == INVALID_HANDLE_VALUE)
 	{
 		fprintf(stderr, "Error: failed to create handle to processed file (time_processed.txt)\n");
@@ -904,31 +983,55 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
+	ConfigFile = LoadConfigFile();
+	DaysOfTheWeek = ParseConfigFile(ConfigFile);
+
 	uint32_t InputFileCharIndex = 0;
-	while(InputFileCharIndex < InputFileSize)
+	for(;;)
 	{
 		char c = InputContents[InputFileCharIndex];
 
-		if(c == END_OF_FILE_FLAG)
+		Assert((c == ENTRY_PROCESSED_FLAG) || 
+			   (c == ENTRY_UNPROCESSED_FLAG) ||
+			   (c == LAST_LINE_FLAG));
+
+		if(c == LAST_LINE_FLAG)
 		{
+			// copy last line
+			uint32_t CharsCopied = CopyLine(&InputContents[InputFileCharIndex],
+											&OutputContents[OutputContentsSize]);
+			OutputContentsSize += CharsCopied;
+
 			break;
-		}
-
-		Assert((c == ENTRY_PROCESSED_FLAG) ||
-			   (c == ENTRY_UNPROCESSED_FLAG));
-		
-		if(c == ENTRY_UNPROCESSED_FLAG)
+		} 
+		else if(c == ENTRY_UNPROCESSED_FLAG)
 		{
-			process_day_result ProcessDayResult = ProcessDay(&InputContents[InputFileCharIndex], 
-															 &OutputContents[OutputContentsSize]);
+			char DayBuffer[4096];
+			copy_day_to_last_entry_result CopyDayToLastEntryResult = CopyDayToLastEntry(&InputContents[InputFileCharIndex], 
+																						DayBuffer);
+			uint32_t InputCharsProcessed = CopyDayToLastEntryResult.CharsCopied;
+			uint32_t DayBufferIndex = InputCharsProcessed;
 
-			InputFileCharIndex += ProcessDayResult.InputCharsProcessed;
-			OutputContentsSize += ProcessDayResult.OutputCharsPushed;
+			if(CopyDayToLastEntryResult.IsLastDay)
+			{
+				DayBufferIndex += InsertDummyEntry(&DayBuffer[DayBufferIndex]);
+			}
+
+			DayBuffer[DayBufferIndex++] = '\r';
+			DayBuffer[DayBufferIndex++] = '\n';
+			InputCharsProcessed += SIZEOF_NEWLINE;
+
+			process_day_result ProcessDayResult = ProcessDay(DayBuffer,
+															 &OutputContents[OutputContentsSize],
+															 &DaysOfTheWeek);
+
+			InputFileCharIndex += InputCharsProcessed;
+			OutputContentsSize += ProcessDayResult.DestCharsAdded;
 		}
 		else
 		{
 			while((InputContents[InputFileCharIndex] != ENTRY_UNPROCESSED_FLAG) &&
-				  (InputContents[InputFileCharIndex] != END_OF_FILE_FLAG))
+				  (InputContents[InputFileCharIndex] != LAST_LINE_FLAG))
 			{
 				uint32_t CharsCopied = CopyLine(&InputContents[InputFileCharIndex],
 												&OutputContents[OutputContentsSize]);
@@ -946,14 +1049,16 @@ main(int argc, char *argv[])
 				  &BytesWritten,
 				  NULL))
 	{
+		Assert(false);
 		fprintf(stderr, "Error: failed to write processed file (time_processed.txt)\n");
 		exit(1);
 	}
 
-	if(BytesWritten != OutputFileSize)
+	Assert(BytesWritten == OutputContentsSize);
+	if(BytesWritten != OutputContentsSize)
 	{
 		fprintf(stderr, "Error: wrote incorrect number of bytes: expected %d but wrote %d.\n", 
-				OutputFileSize, BytesWritten);
+				OutputContentsSize, BytesWritten);
 		exit(1);
 	}
 
