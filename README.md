@@ -30,7 +30,6 @@ This is the file with the anaylsis tables. Some notes:
 * The 'analysis' is on the right side.
 * The `**Executing` entry for the last day is a dummy entry used for calculating the acutal last entry.
 * The table with `****`s represents the last category entered.
-* 
 
 ### final notes
 * Right now there is no way to change the number of rows, not because it would be hard, but because I prefer 3.
