@@ -17,4 +17,11 @@
 
 #define Assert(Expression) if(!(Expression)) { *((int *)0) = 0; }
 
+enum comparison
+{
+	COMPARISON_LESS = (1 << 0),
+	COMPARISON_GREATER = (1 << 1),
+	COMPARISON_EQUAL = (1 << 2)
+};
+
 #endif

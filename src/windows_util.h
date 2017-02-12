@@ -4,7 +4,7 @@ struct read_entire_file_result
 	uint32_t FileSize;
 };
 
-internal char *
+internal read_entire_file_result
 ReadEntireFile(char *Filename)
 {
 	read_entire_file_result Result = {};
@@ -32,8 +32,8 @@ ReadEntireFile(char *Filename)
 		exit(1);
 	}
 
-	Assert(FileSize_.QuadPart <= MAX_INPUT_FILE_SIZE);
-	if(FileSize_.QuadPart > MAX_INPUT_FILE_SIZE)
+	Assert(FileSize_.QuadPart <= 0xFFFFFFFF);
+	if(FileSize_.QuadPart > 0xFFFFFFFF)
 	{
 		fprintf(stderr, "Error: file too big.\n");
 		exit(1);
@@ -41,14 +41,14 @@ ReadEntireFile(char *Filename)
 
 	Result.FileSize = (uint32_t)FileSize_.QuadPart;
 	Result.Contents = (char *)VirtualAlloc(NULL,
-										   FileSize,
+										   Result.FileSize,
 										   MEM_COMMIT | MEM_RESERVE,
 										   PAGE_EXECUTE_READWRITE);
 
 	DWORD BytesRead;
 	if(!ReadFile(File,
-				 InputContents,
-				 FileSize,
+				 Result.Contents,
+				 Result.FileSize,
 				 &BytesRead,
 				 NULL))
 	{
@@ -57,15 +57,15 @@ ReadEntireFile(char *Filename)
 		exit(1);
 	}
 
-	Assert(BytesRead == FileSize);
-	if(BytesRead != FileSize)
+	Assert(BytesRead == Result.FileSize);
+	if(BytesRead != Result.FileSize)
 	{
 		fprintf(stderr, "Error: read incorrect number of bytes: file size is %d but read %d.\n", 
-				FileSize, BytesRead);
+				Result.FileSize, BytesRead);
 		exit(1);
 	}
 
 	CloseHandle(File);
 
-	return FileContents;
+	return Result;
 }

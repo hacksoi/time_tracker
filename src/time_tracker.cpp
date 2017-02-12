@@ -104,7 +104,7 @@ ConvertToTimeCharacters(char *Src)
 
 	Result.Hour.SecondDigit = Src[CharsBeforeColon - 1];
 	Result.Minute.FirstDigit = Src[CharsBeforeColon + 1];
-	Result.Minute.FirstDigit = Src[CharsBeforeColon + 2];
+	Result.Minute.SecondDigit = Src[CharsBeforeColon + 2];
 
 	return Result;
 }
@@ -128,7 +128,7 @@ ProcessEntry(char *Src)
 
 	// parse time
 	{
-		char TimeBuffer[4];
+		char TimeBuffer[5];
 		uint32_t DestCharsAdded = GetToken(&Src, TimeBuffer);
 		Assert(DestCharsAdded <= ArrayCount(TimeBuffer));
 
@@ -152,10 +152,10 @@ FillTableBuffer(char *Buffer, time_category TimeCategory)
 {
 	char *BufferStart = Buffer;
 
-	comparison TimeComparsion = Compare(Table.RealityTime, Table.TargetTime);
+	comparison TimeComparison = Compare(TimeCategory.RealityTime, TimeCategory.TargetTime);
 	char GoodAnalysis[] = "(GOOD)";
 	char BadAnalysis[] = "(BAD)";
-	char *Analysis = (TimeComparision == TimeCategory.BadCondition) ? BadAnalysis : GoodAnalysis;
+	char *Analysis = (TimeComparison & TimeCategory.BadCondition) ? BadAnalysis : GoodAnalysis;
 
 	// line 1
 	{
@@ -167,7 +167,7 @@ FillTableBuffer(char *Buffer, time_category TimeCategory)
 
 	// line 2
 	{
-		uint32_t NameLength = Length(Table.Name);
+		uint32_t NameLength = Length(TimeCategory.Name);
 		uint32_t NameStartCol = ((TABLE_COLUMNS - NameLength) / 2);
 
 		*Buffer++ = '|';
@@ -352,12 +352,12 @@ GetTimeCategory(char *CategoryName, day *Day)
 }
 
 internal process_day_result
-ProcessDay(char *Src, char *Dest, day Days[7])
+ProcessDay(char *Src, char *Dest, day *Days)
 {
 	uint32_t SrcCharsScanned = 0;
 	uint32_t DestCharsAdded = 0;
 
-	day *Day;
+	day *Day = NULL;
 	// parse day name
 	{
 		// advance 2 lines to get to day
@@ -365,14 +365,15 @@ ProcessDay(char *Src, char *Dest, day Days[7])
 				 Dest, &DestCharsAdded, 2);
 
 		char DayNameBuffer[MAX_DAY_NAME_SIZE];
-		GetToken(Src, DayNameBuffer);
+		GetToken(&Src[SrcCharsScanned], DayNameBuffer);
 		for(uint32_t DayIndex = 0;
-			DayIndex < ArrayCount(Days);
+			DayIndex < NUMBER_OF_DAYS;
 			++DayIndex)
 		{
 			if(Equals(DayNameBuffer, Days[DayIndex].Name))
 			{
 				Day = &Days[DayIndex];
+
 				break;
 			}
 		}
@@ -395,18 +396,17 @@ ProcessDay(char *Src, char *Dest, day Days[7])
 		entry PrevEntry = {};
 		for(;;)
 		{
-			entry CurEntry = ProcessEntry(&Src[SrcCharsScanned], 
-										  &Dest[DestCharsAdded]);
+			entry CurEntry = ProcessEntry(&Src[SrcCharsScanned]);
 			if(PrevEntry.CategoryName[0] != '\0')
 			{
 				time_category *PrevTimeCategory = GetTimeCategory(PrevEntry.CategoryName, Day);
 
 				time_elapse TimeElapsed = (CurEntry.StartTime - PrevEntry.StartTime);
 				PrevTimeCategory->RealityTime += TimeElapsed;
-				if(Equals(PrevEntry.CategoryName != "Sleep"))
+				if(!Equals(PrevEntry.CategoryName, "Sleep"))
 				{
-					time_category *AwakeTimeCategory = GetTimeCategory(PrevEntry.CategoryName, Day);
-					AwakeTimeCategory.RealityTime += TimeElapsed;
+					time_category *AwakeTimeCategory = GetTimeCategory("Awake", Day);
+					AwakeTimeCategory->RealityTime += TimeElapsed;
 				}
 			}
 
@@ -426,12 +426,13 @@ ProcessDay(char *Src, char *Dest, day Days[7])
 
 	// insert tables
 	{
+		uint32_t TableCount = Day->TimeCategoryCount;
 		char TableBuffer_[TABLE_SIZE];
 		char *TableBuffer = TableBuffer_;
 		uint32_t BaseDestIndex = DestCharsAdded;
-		uint32_t NumberOfTableRows = Ceil((float)Day->TimeCategoryCount / (float)TABLES_PER_ROW);
+		uint32_t NumberOfTableRows = Ceil((float)TableCount / (float)TABLES_PER_ROW);
 		for(uint32_t TableIndex = 0;
-			TableIndex < Day->TimeCategoryCount);
+			TableIndex < TableCount;
 			++TableIndex)
 		{
 			TableBuffer = TableBuffer_;
@@ -439,19 +440,19 @@ ProcessDay(char *Src, char *Dest, day Days[7])
 
 			uint32_t Row = ((TableIndex / TABLES_PER_ROW) + 1);
 			bool32 OnLastRow = (Row == NumberOfTableRows);
-			uint32_t TablesThisRow = OnLastRow ? (((ArrayCount(Tables) - 1) % TABLES_PER_ROW) + 1) : TABLES_PER_ROW;
+			uint32_t TablesThisRow = OnLastRow ? (((TableCount - 1) % TABLES_PER_ROW) + 1) : TABLES_PER_ROW;
 
 			uint32_t TotalDistanceBetweenTables = ((TablesThisRow - 1) * DISTANCE_BETWEEN_TABLES_HORIZONTAL);
 			uint32_t ThisRowOfTablesLineSize = ((TABLE_COLUMNS * TablesThisRow) + TotalDistanceBetweenTables + SIZEOF_NEWLINE);
 
-			uint32_t ColumnInRow = (TableIndex % TABLES_PER_ROW);
+			uint32_t TableColumnInRow = (TableIndex % TABLES_PER_ROW);
 			for(uint32_t TableRow = 0;
 				TableRow < TABLE_ROWS;
 				++TableRow)
 			{
 				// copy a single row from the table to Dest
 				uint32_t DestIndex = (BaseDestIndex + 
-									  ((TableRow * ThisRowOfTablesLineSize) + (ColumnInRow * TOTAL_TABLE_COLUMNS)));
+									  ((TableRow * ThisRowOfTablesLineSize) + (TableColumnInRow * TOTAL_TABLE_COLUMNS)));
 				for(uint32_t TableColumn = 0;
 					TableColumn < TABLE_COLUMNS;
 					++TableColumn)
@@ -460,8 +461,9 @@ ProcessDay(char *Src, char *Dest, day Days[7])
 					++DestCharsAdded;
 				}
 
-				if((ColumnInRow == (TABLES_PER_ROW - 1)) ||
-				   (TableIndex == (ArrayCount(Tables) - 1)))
+				bool32 IsLastTableInRow = (TableColumnInRow == (TABLES_PER_ROW - 1));
+				bool32 IsLastTable = (TableIndex == (TableCount - 1));
+				if(IsLastTableInRow || IsLastTable)
 				{
 					// last table in row
 					Dest[DestIndex++] = '\r';
@@ -502,12 +504,12 @@ ProcessDay(char *Src, char *Dest, day Days[7])
 }
 
 internal void
-ParseConfigFile(char *ConfigFileContents, day Days[7])
+ParseConfigFile(char *ConfigFileContents, day *Days)
 {
 	day *DaysProcessing[7];
 	uint32_t DaysProcessingCount = 0;
 
-	table *TimeCategoriesProcessing[MAX_TABLES];
+	time_category *TimeCategoriesProcessing[MAX_TIME_CATEGORIES];
 	uint32_t TimeCategoriesProcessingCount = 0;
 
 	config_file_state CurState = CONFIG_FILE_STATE_SEEKING_DAY;
@@ -525,7 +527,7 @@ ParseConfigFile(char *ConfigFileContents, day Days[7])
 				{
 					if(DayNameBuffer[0] == '{')
 					{
-						CurState = CONFIG_FILE_STATE_SEEKING_TABLE;
+						CurState = CONFIG_FILE_STATE_SEEKING_TIME_CATEGORY;
 					}
 					else if(DayNameBuffer[0] == '$')
 					{
@@ -535,12 +537,14 @@ ParseConfigFile(char *ConfigFileContents, day Days[7])
 					{
 						// figure out which day and add it to DaysProcessing
 						for(uint32_t DayIndex = 0;
-							DayIndex < ArrayCount(Days);
+							DayIndex < NUMBER_OF_DAYS;
 							++DayIndex)
 						{
 							if(Equals(DayNameBuffer, Days[DayIndex].Name))
 							{
 								DaysProcessing[DaysProcessingCount++] = &Days[DayIndex];
+
+								break;
 							}
 						}
 					}
@@ -555,21 +559,24 @@ ParseConfigFile(char *ConfigFileContents, day Days[7])
 				{
 					if(TimeCategoryNameBuffer[0] == '{')
 					{
-						CurState = CONFIG_FILE_STATE_SEEKING_TABLE_INFO;
+						CurState = CONFIG_FILE_STATE_SEEKING_TIME_CATEGORY_INFO;
 					}
 					else if(TimeCategoryNameBuffer[0] == '}')
 					{
 						CurState = CONFIG_FILE_STATE_SEEKING_DAY;
+						DaysProcessingCount = 0;
 					}
 					else
 					{
+						TimeCategoryNameBuffer[TokenLength] = '\0';
+
 						// add a time category to each of DaysProcessing
 						for(uint32_t DaysProcessingIndex = 0;
 							DaysProcessingIndex < DaysProcessingCount;
-							++DaysProcessingIIndex)
+							++DaysProcessingIndex)
 						{
 							day *Day = DaysProcessing[DaysProcessingIndex];
-							time_category *NewTimeCategory = &DayToProcess->Tables[DayToProcess->TableCount++];
+							time_category *NewTimeCategory = &Day->TimeCategories[Day->TimeCategoryCount++];
 							TimeCategoriesProcessing[TimeCategoriesProcessingCount++] = NewTimeCategory;
 
 							Copy(TimeCategoryNameBuffer, NewTimeCategory->Name);
@@ -578,48 +585,85 @@ ParseConfigFile(char *ConfigFileContents, day Days[7])
 				}
 			} break;
 
-			case CONFIG_FILE_STATE_SEEKING_TABLE_TIME_CATEGORY_INFO:
+			case CONFIG_FILE_STATE_SEEKING_TIME_CATEGORY_INFO:
 			{
-				char TableInfoNameBuffer[MAX_CONFIG_FILE_LINE_SIZE];
-				uint32_t TokenLength = GetToken(&ConfigFileContents, TableInfoNameBuffer);
+				char TimeCategoryNameBuffer[MAX_CONFIG_FILE_LINE_SIZE];
+				uint32_t TokenLength = GetToken(&ConfigFileContents, TimeCategoryNameBuffer);
 				if(TokenLength > 0)
 				{
-					if(TableNameBuffer[0] == '}')
+					if(TimeCategoryNameBuffer[0] == '}')
 					{
-						CurState = CONFIG_FILE_STATE_SEEKING_TABLE;
-					}
-					else if(TableInfoNameBuffer[0] == 'T')//argetTime
-					{
-						GetToken(&ConfigFileContents, TableInfoNameBuffer);
-						Assert(TableInfoNameBuffer[0] == '=');
-						if(TableInfoNameBuffer[0] != '=')
-						{
-							fprintf("Error parsing config file: '=' missing.\n", TableInfoNameBuffer);
-							exit(1);
-						}
-
-						char TargetTimeBuffer[4];
-						uint32_t CharsGot = GetToken(&ConfigFileContents, TargetTimeBuffer);
-						Assert(CharsGot <= ArrayCount(TargetTimeBuffer));
-						time_elapse TargetTime = ConvertToTimeElapse(TargetTimeBuffer);
-						for(uint32_t TimeCategoriesProcessingIndex = 0;
-							TimeCategoriesProcessingIndex < TimeCategoriesProcessingCount;
-							++TimeCategoriesProcessingIndex)
-						{
-							time_category *TimeCategory = TimeCategoriesProcessing[TimeCategoriesProcessingIndex];
-							TimeCategory.TargetTime = TargetTime;
-						}
-					}
-					else if(TableInfoNameBuffer[0] == 'B')//adCondition
-					{
-
+						CurState = CONFIG_FILE_STATE_SEEKING_TIME_CATEGORY;
+						TimeCategoriesProcessingCount = 0;
 					}
 					else
 					{
-						Assert(false);
-						TableInfoNameBuffer[TokenLength] = '\0';
-						fprintf("Error parsing config file: unknown table value: %s\n", TableInfoNameBuffer);
-						exit(1);
+						char EqualsSignBuffer[1];
+						GetToken(&ConfigFileContents, EqualsSignBuffer);
+						Assert(EqualsSignBuffer[0] == '=');
+						if(EqualsSignBuffer[0] != '=')
+						{
+							fprintf(stderr, "Error parsing config file: '=' missing.\n");
+							exit(1);
+						}
+
+						if(TimeCategoryNameBuffer[0] == 'T')//argetTime
+						{
+							char TargetTimeBuffer[5];
+							uint32_t CharsGot = GetToken(&ConfigFileContents, TargetTimeBuffer);
+							Assert(CharsGot <= ArrayCount(TargetTimeBuffer));
+
+							time_elapse TargetTime = ConvertToTimeElapse(TargetTimeBuffer);
+							for(uint32_t TimeCategoriesProcessingIndex = 0;
+								TimeCategoriesProcessingIndex < TimeCategoriesProcessingCount;
+								++TimeCategoriesProcessingIndex)
+							{
+								time_category *TimeCategory = TimeCategoriesProcessing[TimeCategoriesProcessingIndex];
+								TimeCategory->TargetTime = TargetTime;
+							}
+						}
+						else if(TimeCategoryNameBuffer[0] == 'B')//adCondition
+						{
+							char BadConditionNameBuffer[16];
+							uint32_t CharsGot = GetToken(&ConfigFileContents, BadConditionNameBuffer);
+							Assert(CharsGot <= ArrayCount(BadConditionNameBuffer));
+
+							comparison BadCondition;
+							if(BadConditionNameBuffer[0] == 'U')//nder
+							{
+								BadCondition = COMPARISON_LESS;
+							}
+							else if(BadConditionNameBuffer[0] == 'O')//ver
+							{
+								BadCondition = COMPARISON_GREATER;
+							}
+							else if(BadConditionNameBuffer[0] == 'N')//otEqual
+							{
+								BadCondition = (comparison)(COMPARISON_LESS | COMPARISON_GREATER);
+							}
+							else
+							{
+								Assert(false);
+								TimeCategoryNameBuffer[TokenLength] = '\0';
+								fprintf(stderr, "Error parsing config file: unknown BadCondition value: %s\n", BadConditionNameBuffer);
+								exit(1);
+							}
+
+							for(uint32_t TimeCategoriesProcessingIndex = 0;
+								TimeCategoriesProcessingIndex < TimeCategoriesProcessingCount;
+								++TimeCategoriesProcessingIndex)
+							{
+								time_category *TimeCategory = TimeCategoriesProcessing[TimeCategoriesProcessingIndex];
+								TimeCategory->BadCondition = BadCondition;
+							}
+						}
+						else
+						{
+							Assert(false);
+							TimeCategoryNameBuffer[TokenLength] = '\0';
+							fprintf(stderr, "Error parsing config file: unknown time_category value: %s\n", TimeCategoryNameBuffer);
+							exit(1);
+						}
 					}
 				}
 			} break;
@@ -643,21 +687,29 @@ main(int argc, char *argv[])
 		DaysOfTheWeek[5].Name = "Saturday";
 		DaysOfTheWeek[6].Name = "Sunday";
 	}
-	ParseConfigFile(ReadConfigFileResult.Contents, &DaysOfTheWeek);
+	ParseConfigFile(ReadConfigFileResult.Contents, DaysOfTheWeek);
 
 	read_entire_file_result ReadInputFileResult = ReadEntireFile("time_raw.txt");
-	Assert((InputContents[0] == ENTRY_PROCESSED_FLAG) ||
-		   (InputContents[0] == ENTRY_UNPROCESSED_FLAG));
-	if((InputContents[0] != ENTRY_PROCESSED_FLAG) &&
-	   (InputContents[0] != ENTRY_UNPROCESSED_FLAG))
-	{
-		fprintf(stderr, "Error: input file has incorrect format (first character must be '#' or '@')\n");
-		exit(1);
-	}
-
 	uint32_t InputFileSize = ReadInputFileResult.FileSize;
 	char *InputContents = ReadInputFileResult.Contents;
 	uint32_t InputFileCharIndex = 0;
+	{
+		Assert(ReadInputFileResult.FileSize <= MAX_INPUT_FILE_SIZE);
+		if(ReadInputFileResult.FileSize > MAX_INPUT_FILE_SIZE)
+		{
+			fprintf(stderr, "Error: input file too big.\n");
+			exit(1);
+		}
+
+		Assert((InputContents[0] == ENTRY_PROCESSED_FLAG) ||
+			   (InputContents[0] == ENTRY_UNPROCESSED_FLAG));
+		if((InputContents[0] != ENTRY_PROCESSED_FLAG) &&
+		   (InputContents[0] != ENTRY_UNPROCESSED_FLAG))
+		{
+			fprintf(stderr, "Error: input file has incorrect format (first character must be '#' or '@')\n");
+			exit(1);
+		}
+	}
 
 	uint32_t OutputFileSize = (InputFileSize * TABLES_TO_ENTRY_RATIO);
 	char *OutputContents = (char *)VirtualAlloc(NULL, OutputFileSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
@@ -699,7 +751,7 @@ main(int argc, char *argv[])
 
 			process_day_result ProcessDayResult = ProcessDay(DayBuffer,
 															 &OutputContents[OutputContentsSize],
-															 &DaysOfTheWeek);
+															 DaysOfTheWeek);
 
 			InputFileCharIndex += InputCharsProcessed;
 			OutputContentsSize += ProcessDayResult.DestCharsAdded;

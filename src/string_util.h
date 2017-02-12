@@ -19,7 +19,7 @@ GetToken(char **Src, char *Dest, char ExtraDelimeter = ' ')
 	while((**Src == ' ') ||
 		  (**Src == '\t'))
 	{
-		++(*SrcCharsProcessed);
+		++(*Src);
 	}
 
 	while((**Src != ExtraDelimeter) &&
@@ -30,7 +30,7 @@ GetToken(char **Src, char *Dest, char ExtraDelimeter = ' ')
 		  (**Src != '\0'))
 	{
 		Dest[DestCharsAdded++] = **Src;
-		++(*SrcCharsProcessed);
+		++(*Src);
 	}
 
 	return DestCharsAdded;
@@ -48,7 +48,14 @@ GetToken(char *Src, char *Dest, char ExtraDelimeter = ' ')
 
 	char *BaseSrc = Src;
 	Result.DestCharsAdded = GetToken(&Src, Dest, ExtraDelimeter);
-	Result.SrcCharsScanned = (Src - BaseSrc);
+
+	uint64_t SrcCharsScanned64 = (Src - BaseSrc);
+	uint32_t SrcCharsScanned32 = (uint32_t)SrcCharsScanned64;
+	Assert(SrcCharsScanned32 == SrcCharsScanned64);
+	if(SrcCharsScanned32 == SrcCharsScanned64)
+	{
+		Result.SrcCharsScanned = SrcCharsScanned32;
+	}
 
 	return Result;
 }
@@ -56,7 +63,7 @@ GetToken(char *Src, char *Dest, char ExtraDelimeter = ' ')
 // NOTE(hacksoi): stops at null-terminators (so "Antidisestablishmentarianism"
 // == "Anti")
 internal bool32
-Equal(char *A, char *B)
+Equals(char *A, char *B)
 {
 	bool32 Result = true;
 

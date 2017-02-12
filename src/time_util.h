@@ -149,3 +149,22 @@ operator+=(time_elapse &A, time_elapse B)
 	return A;
 }
 
+inline comparison
+Compare(time_elapse A, time_elapse B)
+{
+	comparison Result;
+	if(A < B)
+	{
+		Result = COMPARISON_LESS;
+	}
+	else if(A > B)
+	{
+		Result = COMPARISON_GREATER;
+	}
+	else
+	{
+		Result = COMPARISON_EQUAL;
+	}
+
+	return Result;
+}

@@ -3,8 +3,16 @@
 #define MAX_INPUT_FILE_SIZE (0xFFFFFFFF / TABLES_TO_ENTRY_RATIO)
 #define SIZE_OF_TABLES 1940
 
+#define MAX_CONFIG_FILE_LINE_SIZE 96
+
 #define MAX_CATEGORY_NAME_LENGTH 32
 #define ENTRY_FORMAT_LENGTH (8 + MAX_CATEGORY_NAME_LENGTH)
+
+#define MAX_CATEGORY_NAME 32
+#define MAX_TIME_CATEGORIES 10
+
+#define NUMBER_OF_DAYS 7
+#define MAX_DAY_NAME_SIZE 9
 
 //
 // NOTE(hacksoi): Variables for processing tables 
@@ -38,13 +46,6 @@ enum config_file_state
 	CONFIG_FILE_STATE_SEEKING_DAY,
 	CONFIG_FILE_STATE_SEEKING_TIME_CATEGORY,
 	CONFIG_FILE_STATE_SEEKING_TIME_CATEGORY_INFO
-};
-
-enum comparsion
-{
-	COMPARISON_LESS = (1 << 0),
-	COMPARISON_GREATER = (1 << 1),
-	COMPARISON_EQUAL = (1 << 2)
 };
 
 struct number2_char
@@ -87,8 +88,8 @@ struct time_category
 		time_elapse TimeElapses[2];
 	};
 
-	comparision GoodCondition;
-	char Name[MAX_TABLE_NAME_SIZE];
+	comparison BadCondition;
+	char Name[MAX_CATEGORY_NAME];
 };
 
 struct day
@@ -101,7 +102,7 @@ struct day
 
 struct process_day_result
 {
-	uint32_t SrcCharsProcessed;
+	uint32_t SrcCharsScanned;
 	uint32_t DestCharsAdded;
 };
 

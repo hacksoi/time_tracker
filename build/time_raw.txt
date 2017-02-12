@@ -219,9 +219,18 @@ Thursday | 02/09/2017 | (Day 14)
 
 Friday | 02/10/2017 | (Day 15)
 4:45  - Sleep:
-14:00 - Play:
+14:00 - Play:				woke up
 14:45 - Programming:		time_tracker
 18:20 - Play:				dad's gun
 18:45 - Programming:		time_tracker
+4:05  - Play:
+5:40  - Sleep:
+
+@_________________________________________________
+
+Saturday | 02/11/2017 | (Day 16)
+5:40  - Sleep:
+14:30 - Play:				woke up
+15:45 - Programming:		time_tracker
 
 $ END
