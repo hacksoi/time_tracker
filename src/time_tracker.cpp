@@ -112,11 +112,23 @@ ConvertToTimeCharacters(char *Src)
 internal time_elapse
 ConvertToTimeElapse(char *Src)
 {
-	time_characters TimeCharacters = ConvertToTimeCharacters(Src);
-
 	time_elapse Result = {};
+
+	time_characters TimeCharacters = ConvertToTimeCharacters(Src);
 	Result.Hours = ConvertToUInt32(TimeCharacters.Hours);
 	Result.Minutes = ConvertToUInt32(TimeCharacters.Minutes);
+
+	return Result;
+}
+
+internal time
+ConvertToTime(char *Src)
+{
+	time Result = {};
+
+	time_characters TimeCharacters = ConvertToTimeCharacters(Src);
+	Result.Hour = ConvertToUInt32(TimeCharacters.Hour);
+	Result.Minute = ConvertToUInt32(TimeCharacters.Minute);
 
 	return Result;
 }
@@ -132,15 +144,15 @@ ProcessEntry(char *Src)
 		uint32_t DestCharsAdded = GetToken(&Src, TimeBuffer);
 		Assert(DestCharsAdded <= ArrayCount(TimeBuffer));
 
-		time_characters TimeCharacters = ConvertToTimeCharacters(TimeBuffer);
-		Result.StartTime.Hour = ConvertToUInt32(TimeCharacters.Hour);
-		Result.StartTime.Minute = ConvertToUInt32(TimeCharacters.Minute);
+		Result.StartTime = ConvertToTime(TimeBuffer);
 	}
 
 	// parse category name
 	{
 		// get rid of dash
-		GetToken(&Src, Result.CategoryName);
+		{
+			GetToken(&Src, Result.CategoryName);
+		}
 		GetToken(&Src, Result.CategoryName, ':');
 	}
 
@@ -399,8 +411,8 @@ ProcessDay(char *Src, char *Dest, day *Days)
 		Day->TimeCategories[TimeCategoryIndex].RealityTime.Minutes = 0;
 	}
 
-	// fill each Day->TimeCategory.RealityTime
 	char *TimeCategoryNameToHighlight = NULL;
+	// fill each Day->TimeCategory.RealityTime
 	{
 		entry PrevEntry = {};
 		for(;;)
@@ -527,7 +539,6 @@ ParseConfigFile(char *ConfigFileContents, day *Days)
 	uint32_t TimeCategoriesProcessingCount = 0;
 
 	config_file_state CurState = CONFIG_FILE_STATE_SEEKING_DAY;
-	uint32_t ContentsIndex = 0;
 	bool32 IsRunning = true;
 	while(IsRunning)
 	{
