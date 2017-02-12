@@ -88,13 +88,13 @@ Friday
 
 	Play
 	{
-		TargetTime = 4:00
+		TargetTime = 4:30
 		BadCondition = Over
 	}
 
 	Education
 	{
-		TargetTime = 6:00
+		TargetTime = 5:30
 		BadCondition = Under
 	}
 
@@ -122,19 +122,19 @@ Sunday
 
 	Play
 	{
-		TargetTime = 3:00
+		TargetTime = 4:30
 		BadCondition = Over
 	}
 
 	School
 	{
-		TargetTime = 3:30
+		TargetTime = 3:00
 		BadCondition = Over
 	}
 
 	Education
 	{
-		TargetTime = 5:00
+		TargetTime = 4:00
 		BadCondition = Under
 	}
 

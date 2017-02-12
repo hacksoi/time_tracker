@@ -31,16 +31,30 @@ ConvertToMinutes(time_elapse A)
 inline bool32
 operator>(time A, time B)
 {
-	bool32 Result = true;
+	bool32 Result;
 
-	if(A.Hour < B.Hour)
+	if(A.Hour > B.Hour)
+	{
+		Result = true;
+	}
+	else if(A.Hour < B.Hour)
 	{
 		Result = false;
 	}
-	else if((A.Hour == B.Hour) && 
-			(A.Minute < B.Minute))
+	else
 	{
-		Result = false;
+		if(A.Minute > B.Minute)
+		{
+			Result = true;
+		}
+		else if(A.Minute < B.Minute)
+		{
+			Result = false;
+		}
+		else
+		{
+			Result = false;
+		}
 	}
 
 	return Result;
@@ -51,14 +65,28 @@ operator>(time_elapse A, time_elapse B)
 {
 	bool32 Result = true;
 
-	if(A.Hours < B.Hours)
+	if(A.Hours > B.Hours)
+	{
+		Result = true;
+	}
+	else if(A.Hours < B.Hours)
 	{
 		Result = false;
 	}
-	else if((A.Hours == B.Hours) && 
-			(A.Minutes < B.Minutes))
+	else
 	{
-		Result = false;
+		if(A.Minutes > B.Minutes)
+		{
+			Result = true;
+		}
+		else if(A.Minutes < B.Minutes)
+		{
+			Result = false;
+		}
+		else
+		{
+			Result = false;
+		}
 	}
 
 	return Result;

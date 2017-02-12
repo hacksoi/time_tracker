@@ -148,7 +148,7 @@ ProcessEntry(char *Src)
 }
 
 internal void
-FillTableBuffer(char *Buffer, time_category TimeCategory)
+FillTableBuffer(char *Buffer, time_category TimeCategory, char *TimeCategoryNameToHighlight)
 {
 	char *BufferStart = Buffer;
 
@@ -172,9 +172,17 @@ FillTableBuffer(char *Buffer, time_category TimeCategory)
 
 		*Buffer++ = '|';
 		uint32_t Col = 1;
-		Copy(&Buffer, ' ', &Col, NameStartCol);
+
+		char WhiteSpace = ' ';
+		if((TimeCategoryNameToHighlight != NULL) &&
+		   Equals(TimeCategory.Name, TimeCategoryNameToHighlight))
+		{
+			WhiteSpace = '*';
+		}
+
+		Copy(&Buffer, WhiteSpace, &Col, NameStartCol);
 		Copy(&Buffer, TimeCategory.Name, &Col);
-		Copy(&Buffer, ' ', &Col, (TABLE_COLUMNS - 1));
+		Copy(&Buffer, WhiteSpace, &Col, (TABLE_COLUMNS - 1));
 		*Buffer++ = '|';
 	}
 
@@ -392,6 +400,7 @@ ProcessDay(char *Src, char *Dest, day *Days)
 	}
 
 	// fill each Day->TimeCategory.RealityTime
+	char *TimeCategoryNameToHighlight = NULL;
 	{
 		entry PrevEntry = {};
 		for(;;)
@@ -417,6 +426,11 @@ ProcessDay(char *Src, char *Dest, day *Days)
 				CopyLine(Src, &SrcCharsScanned, 
 						 Dest, &DestCharsAdded);
 
+				if(Equals(CurEntry.CategoryName, "**Executing"))
+				{
+					TimeCategoryNameToHighlight = PrevEntry.CategoryName;
+				}
+
 				break;
 			}
 
@@ -436,7 +450,7 @@ ProcessDay(char *Src, char *Dest, day *Days)
 			++TableIndex)
 		{
 			TableBuffer = TableBuffer_;
-			FillTableBuffer(TableBuffer, Day->TimeCategories[TableIndex]);
+			FillTableBuffer(TableBuffer, Day->TimeCategories[TableIndex], TimeCategoryNameToHighlight);
 
 			uint32_t Row = ((TableIndex / TABLES_PER_ROW) + 1);
 			bool32 OnLastRow = (Row == NumberOfTableRows);
@@ -712,7 +726,10 @@ main(int argc, char *argv[])
 	}
 
 	uint32_t OutputFileSize = (InputFileSize * TABLES_TO_ENTRY_RATIO);
-	char *OutputContents = (char *)VirtualAlloc(NULL, OutputFileSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	char *OutputContents = (char *)VirtualAlloc(NULL, 
+												OutputFileSize, 
+												MEM_COMMIT | MEM_RESERVE, 
+												PAGE_EXECUTE_READWRITE);
 	uint32_t OutputContentsSize = 0;
 
 	for(;;)

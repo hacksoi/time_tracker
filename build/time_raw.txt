@@ -232,5 +232,7 @@ Saturday | 02/11/2017 | (Day 16)
 5:40  - Sleep:
 14:30 - Play:				woke up
 15:45 - Programming:		time_tracker
+17:58 - Play:
+18:25 - Programming:		time_tracker
 
 $ END
