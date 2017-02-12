@@ -504,11 +504,10 @@ Saturday | 02/11/2017 | (Day 16)
 15:45 - Programming:		time_tracker
 17:58 - Play:
 18:25 - Programming:		time_tracker
-19:37 - Play:
-19:37 - **Executing:
+20:50 - **Executing:
 
  _____________________________________   _____________________________________   _____________________________________ 
-|                Sleep                | |****************Play*****************| |               School                |
+|                Sleep                | |                Play                 | |               School                |
 |-------------------------------------| |-------------------------------------| |-------------------------------------|
 | Target:     8:00 hours       (BAD)  | | Target:     4:30 hours       (GOOD) | | Target:     3:00 hours       (GOOD) |
 | Reality:    8:50 hours       (BAD)  | | Reality:    1:42 hours       (GOOD) | | Reality:    0:00 hours       (GOOD) |
@@ -517,12 +516,12 @@ Saturday | 02/11/2017 | (Day 16)
 |_____________________________________| |_____________________________________| |_____________________________________|
 
  _____________________________________   _____________________________________   _____________________________________ 
-|              Education              | |             Programming             | |                Awake                |
+|              Education              | |*************Programming*************| |                Awake                |
 |-------------------------------------| |-------------------------------------| |-------------------------------------|
-| Target:     4:00 hours       (BAD)  | | Target:     4:30 hours       (BAD)  | | Target:    16:00 hours       (BAD)  |
-| Reality:    0:00 hours       (BAD)  | | Reality:    3:25 hours       (BAD)  | | Reality:    5:07 hours       (BAD)  |
-|            -----------       (BAD)  | |            -----------       (BAD)  | |            -----------       (BAD)  |
-| Result:     4:00 hours under (BAD)  | | Result:     1:05 hours under (BAD)  | | Result:    10:53 hours under (BAD)  |
+| Target:     4:00 hours       (BAD)  | | Target:     4:30 hours       (GOOD) | | Target:    16:00 hours       (BAD)  |
+| Reality:    0:00 hours       (BAD)  | | Reality:    4:38 hours       (GOOD) | | Reality:    6:20 hours       (BAD)  |
+|            -----------       (BAD)  | |            -----------       (GOOD) | |            -----------       (BAD)  |
+| Result:     4:00 hours under (BAD)  | | Result:     0:08 hours over  (GOOD) | | Result:     9:40 hours under (BAD)  |
 |_____________________________________| |_____________________________________| |_____________________________________|
 
 $ END

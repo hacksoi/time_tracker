@@ -18,6 +18,7 @@ This is the file describing your days that gets fed into `time_tracker`. Some no
 
 ##### time_cfg.txt
 This is the file describing time categories for each day that also gets fed into `time_tracker`. Some notes:
+* Just about everything needs to be on its own line (i.e. the `{` and `}`s must be on their own line).
 * `TargetTime` is the time elapsed you are shooting for for a particular category.
 * `BadCondition` is the condition that describes whether or not the difference between `TargetTime` elapsed and `RealityTime` elapsed is good or bad.
 * `$ END` must be at the end of the file.

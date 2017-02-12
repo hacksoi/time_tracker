@@ -234,6 +234,5 @@ Saturday | 02/11/2017 | (Day 16)
 15:45 - Programming:		time_tracker
 17:58 - Play:
 18:25 - Programming:		time_tracker
-19:37 - Play:
 
 $ END
