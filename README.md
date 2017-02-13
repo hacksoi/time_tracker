@@ -21,6 +21,7 @@ This is the file describing time categories for each day that also gets fed into
 * Just about everything needs to be on its own line (i.e. the `{` and `}`s must be on their own line).
 * `TargetTime` is the time elapsed you are shooting for for a particular category.
 * `BadCondition` is the condition that describes whether or not the difference between `TargetTime` elapsed and `RealityTime` elapsed is good or bad.
+* Time categories for days later in the file override previous time cateogories.
 * `$ END` must be at the end of the file.
 
 ##### time_processed.txt

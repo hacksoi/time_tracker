@@ -1,8 +1,3 @@
-
-// TODO: Change process of parsing and printing hours
-// so that the first digit of the hour is not required for parsing and is not
-// printed for printing.
-
 #include <Windows.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -601,7 +596,29 @@ ParseConfigFile(char *ConfigFileContents, day *Days)
 							++DaysProcessingIndex)
 						{
 							day *Day = DaysProcessing[DaysProcessingIndex];
-							time_category *NewTimeCategory = &Day->TimeCategories[Day->TimeCategoryCount++];
+
+							time_category *NewTimeCategory = NULL;
+							// check if day already has time category
+							{
+								bool32 AlreadyHasTimeCategory = false;
+								for(uint32_t TimeCategoryIndex = 0;
+									TimeCategoryIndex < Day->TimeCategoryCount;
+									++TimeCategoryIndex)
+								{
+									time_category *TimeCategory = &Day->TimeCategories[TimeCategoryIndex];
+									if(Equals(TimeCategoryNameBuffer, TimeCategory->Name))
+									{
+										NewTimeCategory = TimeCategory;
+										AlreadyHasTimeCategory = true;
+										break;
+									}
+								}
+								if(!AlreadyHasTimeCategory)
+								{
+									NewTimeCategory = &Day->TimeCategories[Day->TimeCategoryCount++];
+								}
+							}
+							Assert(NewTimeCategory != NULL);
 							TimeCategoriesProcessing[TimeCategoriesProcessingCount++] = NewTimeCategory;
 
 							Copy(TimeCategoryNameBuffer, NewTimeCategory->Name);

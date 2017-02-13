@@ -151,4 +151,43 @@ Sunday
 	}
 }
 
+Sunday // NOTE: TEMPORARY
+{
+	Sleep
+	{
+		TargetTime = 8:00
+		BadCondition = NotEqual
+	}
+
+	Play
+	{
+		TargetTime = 3:00
+		BadCondition = Over
+	}
+
+	School
+	{
+		TargetTime = 5:30
+		BadCondition = Over
+	}
+
+	Education
+	{
+		TargetTime = 2:00
+		BadCondition = Under
+	}
+
+	Programming
+	{
+		TargetTime = 0:20
+		BadCondition = Under
+	}
+
+	Awake
+	{
+		TargetTime = 11:00
+		BadCondition = NotEqual
+	}
+}
+
 $ END

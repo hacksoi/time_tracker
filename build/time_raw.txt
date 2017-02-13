@@ -229,10 +229,31 @@ Friday | 02/10/2017 | (Day 15)
 @_________________________________________________
 
 Saturday | 02/11/2017 | (Day 16)
-5:40  - Sleep:
+05:40 - Sleep:
 14:30 - Play:				woke up
 15:45 - Programming:		time_tracker
 17:58 - Play:
 18:25 - Programming:		time_tracker
+20:56 - Play:
+21:53 - School:				poli sci hw
+23:30 - Play:
+23:45 - School:				more poli sci hw
+00:53 - Play:
+01:40 - Programming:		time_tracker
+02:40 - Play:
+04:00 - Sleep:
+
+@_________________________________________________
+
+Sunday | 02/11/2017 | (Day 17)
+04:00 - Sleep:
+11:00 - Play:				woke up
+12:00 - Programming:		time_tracker
+12:15 - Education:			handmade hero day 083
+14:03 - Play:
+14:42 - School:				cs560 hw
+18:30 - Play:				twitch
+19:03 - School:				cs560 hw
+20:54 - Play:
 
 $ END

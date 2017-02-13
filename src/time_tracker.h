@@ -1,3 +1,7 @@
+
+// TODO(hacksoi): Add overrides in time_cfg.txt so that day entries later in
+// the file override earlier day entries.
+
 // NOTE(hacksoi): I actually calculated around 6
 #define TABLES_TO_ENTRY_RATIO 8
 #define MAX_INPUT_FILE_SIZE (0xFFFFFFFF / TABLES_TO_ENTRY_RATIO)
